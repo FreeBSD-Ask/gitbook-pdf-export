@@ -1,6 +1,6 @@
 # gitbook-pdf-export
 
-For English in [README-en.md](./README-en.md)
+**For English in [README-en.md](./README-en.md)**
 
 gitbook 通用 PDF 导出工具。
 
