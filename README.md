@@ -52,10 +52,17 @@ gitbook 通用 PDF 导出工具。
 
 在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
 
-进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 Add Python 3.x to PATH**。默认情况下，会自动安装 pip。
+- **安装 Python3 和 pip3** 进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 Add Python 3.x to PATH**。默认情况下，会自动安装 pip。
+- **安装 gtk3-runtime** 进入 <https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases> 下载安装“gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe“即可。
+- **安装 mistune 和 weasyprint**
+
+>```
+>C:\Windows\system32>pip install mistune weasyprint
+>```
+
+使用方法：
 
 ```
-C:\Windows\system32>pip install mistune weasyprint
 C:\Windows\system32>cd C:\Users\ykla\Desktop\h ①
 C:\Users\ykla\Desktop\h>python mdconv.py Handbook
 ```
