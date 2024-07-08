@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+<style>
+@font-face {
+	font-family:Noto Sans SC;
+	src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
+}
+/* 进行分页的 summary 层级 */
+@media print {
+	h1 {page-break-before: always;}
+		h2 {page-break-before: always;}
+			h3 {page-break-before: always;}
+				h4 {page-break-before: always;}
+					h5 {page-break-before: always;}
+						h6 {page-break-before: always;}
+}
+body { font-family: Noto Sans SC;}
+table {border:2px solid;border-radius:8px;}
+table tr td {border-right:1px solid;border-bottom:1px solid;text-align:left;}
+table tr td:last-child {border-right:0px;}
+table tr:last-child td {border-bottom:0px;}
+table tr th {border-bottom:1px solid;border-right:1px solid;text-align:center;}
+table tr th:last-child {border-right:0px;}
+tr:nth-child(even) {
+    background-color: rgba(100,100,100,0.5); /* 设置偶数行的背景色 */
+}
+tr:nth-child(odd) {
+    background-color: rgba(255,255,255,0.5); /* 设置奇数行的背景色 */
+}
+img {max-width:100%;}
+pre {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    /* 可选的样式，例如字体大小和边框 */
+    font-size: 14px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color:rgba(0,100,50,0.4);
+    border-radius:6px;
+}
+code {
+    border:1px solid;
+    border-radius:5px;
+    background-color:rgba(100,100,50,0.4);
+    padding-left:5px;
+    padding-right:5px;
+}
+pre code {border:none;
+	background-color:transparent;
+	}
+</style>
+</head>
+<body>
+
