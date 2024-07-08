@@ -1,5 +1,7 @@
 # gitbook-pdf-export
 
+Powered by safreya
+
 gitbook universal PDF export tool
 
 **This project is based on Python3, mistune and weasyprint**
