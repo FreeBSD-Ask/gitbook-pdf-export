@@ -24,9 +24,7 @@ gitbook 通用 PDF 导出工具。
 
 在 lang/python311、py311-pip、py311-weasyprint、py311-mistune 下测试通过。
 
-使用方法参考：
-
-目录结构：
+### 目录结构：
 
 我在 `/` 目录下创建了 `abc` 目录，并将 gitbook 项目目录整体放入了目录 `h` 中。
 
@@ -38,6 +36,8 @@ gitbook 通用 PDF 导出工具。
 ├── mdconv.py
 └── start.html
 ```
+
+### 安装及使用方法
 
 ```
 # pkg install python311 py311-pip py311-weasyprint py311-mistune
@@ -52,15 +52,31 @@ gitbook 通用 PDF 导出工具。
 
 在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
 
+
+
+### 目录结构
+
+```
+C:\Users\ykla\Desktop\h\
+├── build/
+├── end.html
+├── Handbook/ # ②
+├── mdconv.py
+└── start.html
+```
+
+### 安装方法
+
 - **安装 Python3 和 pip3** 进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 Add Python 3.x to PATH**。默认情况下，会自动安装 pip。
 - **安装 gtk3-runtime** 进入 <https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases> 下载安装“gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe“即可。
+>gtk3-runtime 是 weasyprint 在 Windows 上的运行依赖，必须安装。
 - **安装 mistune 和 weasyprint**
 
 >```
 >C:\Windows\system32>pip install mistune weasyprint
 >```
 
-使用方法：
+### 使用方法
 
 ```
 C:\Windows\system32>cd C:\Users\ykla\Desktop\h ①
@@ -73,15 +89,11 @@ C:\Users\ykla\Desktop\h>python mdconv.py Handbook
 >
 >如果不知道用户名是什么，可以打开同时按快捷键 `ctrl` `alt` `del` 来打开任务管理器，点击“用户”，就能看到了，如果账户名是中文，后果将不可知，因为未经测试。
 
-```
-C:\Users\ykla\Desktop\h\
-├── build/
-├── end.html
-├── Handbook/ # ②
-├── mdconv.py
-└── start.html
-```
 
 ## Linux
  
 由于 Linux 发行版种类繁多，版本各异，即使是在最常见的 Ubuntu 上安装 weasyprint 模块也非常复杂，故待有缘人对该部分内容进行补充。欢迎 PR。
+
+## Macos 
+
+待有缘人对该部分内容进行补充。欢迎 PR。
