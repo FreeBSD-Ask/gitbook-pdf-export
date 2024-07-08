@@ -94,6 +94,6 @@ C:\Users\ykla\Desktop\h>python mdconv.py Handbook
  
 由于 Linux 发行版种类繁多，版本各异，即使是在最常见的 Ubuntu 上安装 weasyprint 模块也非常复杂，故待有缘人对该部分内容进行补充。欢迎 PR。
 
-## Macos 
+## MacOS
 
 待有缘人对该部分内容进行补充。欢迎 PR。
