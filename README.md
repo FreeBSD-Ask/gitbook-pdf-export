@@ -52,7 +52,7 @@ gitbook 通用 PDF 导出工具。
 
 在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
 
-进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 Add Python 3.x to PATH** 默认情况下，会自动安装 pip。
+进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 Add Python 3.x to PATH**。默认情况下，会自动安装 pip。
 
 ```
 C:\Windows\system32>pip install mistune weasyprint
