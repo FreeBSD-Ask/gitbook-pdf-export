@@ -20,9 +20,6 @@ gitbook 通用 PDF 导出工具。
 
 其他未说明文件均可删除。
 
-## 功能说明
-
-
 ## FreeBSD 14.1 RELEASE 使用说明
 
 在 lang/python311、py311-pip、py311-weasyprint、py311-mistune 下测试通过。
