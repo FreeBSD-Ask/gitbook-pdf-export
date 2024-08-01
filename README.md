@@ -1,4 +1,4 @@
-# gitbook-pdf-export
+# Gitbook 通用 PDF 导出工具
 
 原作者为：safreya
 
