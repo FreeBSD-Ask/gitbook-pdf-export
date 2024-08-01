@@ -20,7 +20,6 @@ A universal PDF export tool for GitBook.
 
 All other files not mentioned can be deleted.
 
-## Feature Description
 
 ## FreeBSD 14.1 RELEASE Instructions
 
