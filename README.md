@@ -23,7 +23,6 @@ gitbook 通用 PDF 导出工具。
 ## 功能说明
 
 
-
 ## FreeBSD 14.1 RELEASE 使用说明
 
 在 lang/python311、py311-pip、py311-weasyprint、py311-mistune 下测试通过。
@@ -54,8 +53,10 @@ gitbook 通用 PDF 导出工具。
 
 ## Windows 10 21H2 使用说明
 
-在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
+>**如果所需文中所需文件在网络上找不到，请点击页面的“releases”，进行下载。**
 
+
+在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
 
 
 ### 目录结构
