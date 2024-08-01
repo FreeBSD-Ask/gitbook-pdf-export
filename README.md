@@ -71,7 +71,7 @@ C:\Users\ykla\Desktop\h\
 
 ### 安装方法
 
-- **安装 Python3 和 pip3** 进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 Add Python 3.x to PATH**。默认情况下，会自动安装 pip。
+- **安装 Python3 和 pip3** 进入 <https://www.python.org/downloads/>，点击“Download Python 3.xx.x”即可下载。**请务必在安装时勾选 `Add Python 3.x to PATH`**。在默认情况下，会自动安装 pip。
 - **安装 gtk3-runtime** 进入 <https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases> 下载安装“gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe“即可。
 >gtk3-runtime 是 weasyprint 在 Windows 上的运行依赖，必须安装。
 - **安装 mistune 和 weasyprint**
