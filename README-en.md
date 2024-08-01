@@ -1,43 +1,45 @@
-# gitbook-pdf-export
+# GitBook Project Universal PDF Export Tool
 
-Powered by safreya
+Original author: safreya
 
-gitbook universal PDF export tool
+**For English in [README-en.md](./README-en.md)**
 
-**This project is based on Python3, mistune and weasyprint**
+A universal PDF export tool for GitBook.
+
+**This project is based on Python3, mistune, and weasyprint**
 
 ## File Description
 
-| File/Directory  | Description                                                                                   |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| build           | Path for generating PDF, cannot be deleted                                                    |
-| build/readme.md | Indicates files in this directory that cannot be deleted, the directory itself can be deleted |
-| end.html        | CSS configuration file, cannot be deleted                                                     |
-| [mdconv.py](http://mdconv.py)                | Main program, not to be deleted                                                               |
-| start.html      | Main CSS configuration file, not to be deleted                                                |
+| File/Directory | Description |
+|:---:|:---:|
+| build | Path for generating PDFs, should not be deleted |
+| build/readme.md | File indicating that this directory should not be deleted, but the file itself can be removed |
+| end.html | CSS configuration file, should not be deleted |
+| mdconv.py | Main program, should not be deleted |
+| start.html | Main CSS configuration file, should not be deleted |
 
- Other unspecified files can be deleted.
+All other files not mentioned can be deleted.
 
-## Function Description
+## Feature Description
 
-## FreeBSD 14.1 RELEASE User Guide
+## FreeBSD 14.1 RELEASE Instructions
 
-Tested under lang/python311, py311-pip, py311-weasyprint, py311-mistune.
+Tested with lang/python311, py311-pip, py311-weasyprint, and py311-mistune.
 
 ### Directory Structure:
 
-I created a directory / under which I placed the gitbook project directory as a whole into directory h .
+I created the `abc` directory under the `/` directory and placed the entire GitBook project directory into the `h` directory.
 
 ```
 /abc/ ①
 ├── build/
 ├── end.html
-├── Handbook/ # ②
+├── Handbook/
 ├── mdconv.py
 └── start.html
 ```
 
-### Installation and Usage Methods
+### Installation and Usage
 
 ```
 # pkg install python311 py311-pip py311-weasyprint py311-mistune
@@ -45,11 +47,13 @@ I created a directory / under which I placed the gitbook project directory as a 
 # python mdconv.py Handbook
 ```
 
- ① Please replace with your own path
+① Please replace with your own path.
 
-## Windows 10 21H2 User Guide
+## Windows 10 21H2 Instructions
 
-Tested under Python 3.12.3, pip 24.1.1, mistune 3.0.2, weasyprint 61.2, gtk3-runtime 3.24.31.
+>**If the required files cannot be found online, please click "releases" on the page to download them.**
+
+Tested with Python 3.12.3, pip 24.1.1, mistune 3.0.2, weasyprint 61.2, and gtk3-runtime 3.24.31.
 
 ### Directory Structure
 
@@ -57,41 +61,39 @@ Tested under Python 3.12.3, pip 24.1.1, mistune 3.0.2, weasyprint 61.2, gtk3-run
 C:\Users\ykla\Desktop\h\
 ├── build/
 ├── end.html
-├── Handbook/ # 
+├── Handbook/
 ├── mdconv.py
 └── start.html
 ```
 
 ### Installation Method
 
-* Install Python3 and pip3 by visiting https://www.python.org/downloads/, click on "Download Python 3.xx.x" to download. Be sure to check Add Python 3.x to PATH during installation. By default, pip will be installed automatically.
-* To install gtk3-runtime, visit https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases and download "gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe" for installation.
+- **Install Python3 and pip3** Go to <https://www.python.org/downloads/>, click "Download Python 3.xx.x" to download. **Be sure to check `Add Python 3.x to PATH` during installation**. Pip will be installed automatically by default.
+- **Install gtk3-runtime** Go to <https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases> and download "gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe".
+> gtk3-runtime is a runtime dependency for weasyprint on Windows and must be installed.
+- **Install mistune and weasyprint**
 
-> gtk3-runtime is a runtime dependency of weasyprint on Windows, and must be installed.
+>```
+>C:\Windows\system32>pip install mistune weasyprint
+>```
 
-* **Install mistune and weasyprint**
-
-> ```
-> C:\Windows\system32>pip install mistune weasyprint
-> ```
-
-### How to use
+### Usage
 
 ```
 C:\Windows\system32>cd C:\Users\ykla\Desktop\h ①
 C:\Users\ykla\Desktop\h>python mdconv.py Handbook
 ```
 
-① I placed it in the "h" folder on user "ykla" desktop, and placed the gitbook project in the folder h .
+① I placed it in the "h" folder on the user "ykla" desktop and put the GitBook project into the `h` folder.
 
-> **Note**
+>**Note**
 >
-> If you do not know what the user name is, you can open the task manager by pressing the shortcut keys simultaneously ctrl alt del , click "Users", and you will see it. If the account name is in Chinese, the consequences will be unknown because it has not been tested.
+>If you are unsure about the username, you can open Task Manager by pressing the `ctrl` `alt` `del` keys simultaneously, and then click "Users" to see it. If the account name is in Chinese, the consequences are unknown as it has not been tested.
 
 ## Linux
 
-Due to the wide variety of Linux distributions and their different versions, even installing the weasyprint module on the most common Ubuntu is very complex. Therefore, this part of the content is left for interested parties to supplement. Contributions are welcome.
+Due to the variety of Linux distributions and their different versions, even on the most common Ubuntu, installing the weasyprint module is very complicated. Therefore, this part awaits contributions from those who are willing. PRs are welcome.
 
 ## MacOS
 
- For the fate of the person concerned with this part of the content to supplement. Welcome PR.
+This part awaits contributions from those who are willing. PRs are welcome.
