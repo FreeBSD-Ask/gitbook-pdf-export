@@ -96,6 +96,8 @@ C:\Users\ykla\Desktop\h>python mdconv.py Handbook
  
 由于 Linux 发行版种类繁多，版本各异，即使是在最常见的 Ubuntu 上安装 weasyprint 模块也非常复杂，故待有缘人对该部分内容进行补充。欢迎 PR。
 
+功能请求：如果可以，请顺便写一下 Github Action（可以以 `https://github.com/FreeBSD-Ask/FreeBSD-Ask/` 为例），当每次 PR 或 commit 时都能生成一份 PDF。因为我们期望用户能够更顺畅地获取 PDF 文档。
+
 ## MacOS
 
 待有缘人对该部分内容进行补充。欢迎 PR。
