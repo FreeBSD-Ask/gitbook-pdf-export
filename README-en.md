@@ -13,7 +13,7 @@ A universal PDF export tool for GitBook.
 | File/Directory | Description |
 |:---:|:---:|
 | build | Path for generating PDFs, should not be deleted |
-| build/readme.md | File indicating that this directory should not be deleted, but the file itself can be removed |
+| build/readme.md | Tip file, removable |
 | end.html | CSS configuration file, should not be deleted |
 | mdconv.py | Main program, should not be deleted |
 | start.html | Main CSS configuration file, should not be deleted |
@@ -92,6 +92,8 @@ C:\Users\ykla\Desktop\h>python mdconv.py Handbook
 ## Linux
 
 Due to the variety of Linux distributions and their different versions, even on the most common Ubuntu, installing the weasyprint module is very complicated. Therefore, this part awaits contributions from those who are willing. PRs are welcome.
+
+Feature request: If possible, please write a Github Action (you can use `https://github.com/FreeBSD-Ask/FreeBSD-Ask/` as an example) that generates a PDF every time a PR or commit is made, as we expect users to be able to access PDF documents more smoothly.
 
 ## MacOS
 
