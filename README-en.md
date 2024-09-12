@@ -12,8 +12,7 @@ A universal PDF export tool for GitBook.
 
 | File/Directory | Description |
 |:---:|:---:|
-| build | Path for generating PDFs, should not be deleted |
-| build/readme.md | Tip file, removable |
+| build | Path for generating PDF, does not exist by default |
 | end.html | CSS configuration file, should not be deleted |
 | mdconv.py | Main program, should not be deleted |
 | start.html | Main CSS configuration file, should not be deleted |
