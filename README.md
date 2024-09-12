@@ -1,4 +1,4 @@
-# GitBook 项目 PDF 通用导出工具
+# GitBook 项目 PDF 通用导出工具（GitBook Project Universal PDF Export Tool）
 
 原作者为：safreya
 
