@@ -21,13 +21,13 @@ gitbook 通用 PDF 导出工具。
 
 ## FreeBSD 14.1 RELEASE 使用说明
 
-在 lang/python311、py311-pip、py311-weasyprint、py311-mistune 下测试通过。
+在 lang/python311、py311-pip、py311-weasyprint、py311-mistune、py311-pygments 下测试通过。
 
 ### 目录结构：
 
 我在 `/` 目录下创建了 `abc` 目录，并将 gitbook 项目目录整体放入了目录 `h` 中。
 
-```
+```sh
 /abc/ ①
 ├── end.html
 ├── Handbook/ 
@@ -37,8 +37,8 @@ gitbook 通用 PDF 导出工具。
 
 ### 安装及使用方法
 
-```
-# pkg install python311 py311-pip py311-weasyprint py311-mistune
+```sh
+# pkg install python311 py311-pip py311-weasyprint py311-mistune py311-pygments
 # cd /abc ①
 # python mdconv.py Handbook
 ```
@@ -51,12 +51,12 @@ gitbook 通用 PDF 导出工具。
 >**如果所需文中所需文件在网络上找不到，请点击页面的“releases”，进行下载。**
 
 
-在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
+在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31、Pygments 2.17.2 下测试通过。
 
 
 ### 目录结构
 
-```
+```batch
 C:\Users\ykla\Desktop\h\
 ├── end.html
 ├── Handbook/ 
@@ -71,13 +71,13 @@ C:\Users\ykla\Desktop\h\
 >gtk3-runtime 是 weasyprint 在 Windows 上的运行依赖，必须安装。
 - **安装 mistune 和 weasyprint**
 
->```
->C:\Windows\system32>pip install mistune weasyprint
+>```batch
+>C:\Windows\system32>pip install mistune weasyprint pygments
 >```
 
 ### 使用方法
 
-```
+```batch
 C:\Windows\system32>cd C:\Users\ykla\Desktop\h ①
 C:\Users\ykla\Desktop\h>python mdconv.py Handbook
 ```
