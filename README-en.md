@@ -30,7 +30,6 @@ I created the `abc` directory under the `/` directory and placed the entire GitB
 
 ```
 /abc/ ①
-├── build/
 ├── end.html
 ├── Handbook/
 ├── mdconv.py
@@ -57,7 +56,6 @@ Tested with Python 3.12.3, pip 24.1.1, mistune 3.0.2, weasyprint 61.2, and gtk3-
 
 ```
 C:\Users\ykla\Desktop\h\
-├── build/
 ├── end.html
 ├── Handbook/
 ├── mdconv.py
