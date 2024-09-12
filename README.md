@@ -29,7 +29,6 @@ gitbook 通用 PDF 导出工具。
 
 ```
 /abc/ ①
-├── build/
 ├── end.html
 ├── Handbook/ 
 ├── mdconv.py
@@ -59,7 +58,6 @@ gitbook 通用 PDF 导出工具。
 
 ```
 C:\Users\ykla\Desktop\h\
-├── build/
 ├── end.html
 ├── Handbook/ 
 ├── mdconv.py
