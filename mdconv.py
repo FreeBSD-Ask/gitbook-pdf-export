@@ -5,6 +5,9 @@ from weasyprint.text.fonts import FontConfiguration
 import re
 import argparse
 import mistune
+from pygments import highlight
+from pygments.lexers import get_lexer_by_name
+from pygments.formatters import html as pygments_html_formatter
 
 # 创建或清空 build 目录
 def prepare_build_dir(build_dir):
@@ -26,6 +29,17 @@ class CustomRenderer(mistune.HTMLRenderer):
         # 将所有标题级别降一级
         new_level = level + 1
         return f'<h{new_level}>{text}</h{new_level}>'
+    def block_code(self, code, info=None):
+        if info:
+            try:
+                lexer = get_lexer_by_name(info.strip(), stripall=True)
+            except Exception:
+                lexer = get_lexer_by_name('text', stripall=True)
+        else:
+            lexer = get_lexer_by_name('text',stripall=True)
+        formatter = pygments_html_formatter.HtmlFormatter()
+        return highlight(code, lexer, formatter)
+
 
 def markdown_to_html(markdown_text):  # 目录降级
     renderer = CustomRenderer(escape=False)

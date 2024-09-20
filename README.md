@@ -1,8 +1,8 @@
 # GitBook 项目 PDF 通用导出工具（GitBook Project Universal PDF Export Tool）
 
-原作者为：safreya
+作者为：safreya
 
-gitbook 通用 PDF 导出工具。
+gitbook 通用 PDF 导出工具。支持代码高亮。
 
 **本项目基于 Python3、mistune 及 weasyprint**
 
@@ -19,7 +19,7 @@ gitbook 通用 PDF 导出工具。
 
 ## FreeBSD 14.1 RELEASE 使用说明
 
-在 lang/python311、py311-pip、py311-weasyprint、py311-mistune 下测试通过。
+在 lang/python311、py311-pip、py311-weasyprint、py311-mistune py311-pygments 下测试通过。
 
 ### 目录结构：
 
@@ -36,7 +36,7 @@ gitbook 通用 PDF 导出工具。
 ### 安装及使用方法
 
 ```sh
-# pkg install python311 py311-pip py311-weasyprint py311-mistune
+# pkg install python311 py311-pip py311-weasyprint py311-mistune py311-pygments
 # cd /abc ①
 # python mdconv.py Handbook
 ```
@@ -49,7 +49,7 @@ gitbook 通用 PDF 导出工具。
 >**如果所需文中所需文件在网络上找不到，请点击页面的“releases”，进行下载。**
 
 
-在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.31 下测试通过。
+在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.3、pygments 2.17.2 下测试通过。
 
 
 ### 目录结构
@@ -70,7 +70,7 @@ C:\Users\ykla\Desktop\h\
 - **安装 mistune 和 weasyprint**
 
 >```batch
->C:\Windows\system32>pip install mistune weasyprint 
+>C:\Windows\system32>pip install mistune weasyprint  pygments1
 >```
 
 ### 使用方法
