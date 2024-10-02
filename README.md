@@ -70,7 +70,7 @@ C:\Users\ykla\Desktop\h\
 - **安装 mistune 和 weasyprint**
 
 >```batch
->C:\Windows\system32>pip install mistune weasyprint  pygments1
+>C:\Windows\system32>pip install mistune weasyprint  pygments
 >```
 
 ### 使用方法
