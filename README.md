@@ -87,7 +87,7 @@ C:\Users\ykla\Desktop\h>python mdconv.py Handbook
 >如果不知道用户名是什么，可以打开同时按快捷键 `ctrl` `alt` `del` 来打开任务管理器，点击“用户”，就能看到了，如果账户名是中文，后果将不可知，因为未经测试。
 
 
-## Linux
+## Linux/GitHub Action
  
 参见 https://github.com/ykla/FreeBSD-Ask/actions
 
