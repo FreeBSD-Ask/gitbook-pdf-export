@@ -10,6 +10,17 @@
 	src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
 	/* 指定字体的路径和格式，'opentype' 表示字体文件为 OpenType 格式 */
 }
+	/* 同时设置行间距和段间距 */
+p {
+  line-height: 1.6; /* 1.6 表示 1.6 倍行高 */
+  margin-bottom: 1.5em; /* 设置段间距 */
+}
+
+/* 首行缩进 */
+p {
+  text-indent: 2em;
+}
+
 /* 进行分页的 summary 层级 */
 @media print {
 	/* 针对打印媒体设置分页规则 */
