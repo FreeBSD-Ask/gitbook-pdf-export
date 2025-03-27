@@ -8,7 +8,7 @@ import mistune
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import html as pygments_html_formatter
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 # 获取当前工作目录的绝对路径
 BASE_DIR = os.path.abspath(os.getcwd())
