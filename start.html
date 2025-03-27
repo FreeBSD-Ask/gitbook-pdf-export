@@ -81,7 +81,7 @@ tr:nth-child(even) {
 	/* 设置偶数行的背景色为半透明的灰色 (rgba(100,100,100,0.2))，用于区分奇偶行 */
 }
 tr:nth-child(odd) {
-	background-color: rgba(255,255,255,0.5);
+	background-color: rgba(255,255,255,0.3);
 	/* 设置奇数行的背景色为半透明的白色 (rgba(255,255,255,0.2))，用于区分奇偶行 */
 }
 img {
@@ -89,32 +89,22 @@ img {
 	/* 设置图片的最大宽度为容器的100%，确保图片不会超出其容器的宽度 */
 }
 pre {
-	white-space: pre-wrap;
-	/* 设置预格式文本换行，以便在小屏幕上也能适当显示 */
-	overflow-wrap: break-word;
-	/* 如果单词过长，允许其在必要时进行断行 */
-	/* 以下是可选样式 */
-	font-size: 14px;
-	/* 设置预格式文本的字体大小为14px */
-	border: 1px solid #ccc;
-	/* 为预格式文本添加1像素的灰色(#ccc)边框 */
-	padding: 10px;
-	/* 为预格式文本添加10像素的内边距 */
-	background-color: rgba(0,100,50,0.2);
-	/* 设置预格式文本的背景颜色为半透明的绿色 (rgba(0,100,50,0.2)) */
-	border-radius: 6px;
-	/* 设置预格式文本的边框圆角为6像素，增加视觉美观性 */
+  white-space: pre-wrap;       /* 自动保留换行符，允许文本根据容器宽度自动换行 */
+  overflow-wrap: break-word;   /* 强制长单词/URL在容器边界处断行，防止内容溢出 */
+  font-size: 14px;             /* 设置代码块基础字号为14像素 */
+  padding: 10px;               /* 添加10像素内边距，增加内容呼吸空间 */
+  background-color: rgba(0, 100, 50, 0.2);  /* 半透明深绿色背景 (红0,绿100,蓝50,透明度0.2) */
+  border-radius: 6px;          /* 6像素圆角，软化容器边缘 */
+  
+  /* 已移除的边框样式 
+  border: 1px solid #ccc;      <- 此属性已被删除 */
 }
 code {
-	border: 1px solid;
-	/* 为行内代码添加1像素实线边框 */
-	border-radius: 5px;
-	/* 设置行内代码的边框圆角为5像素，增加视觉美观性 */
-	background-color: rgba(100,100,50,0.3);
-	/* 设置行内代码的背景颜色为半透明的白色 (rgba(242, 249, 252, 0.2)) */
-	padding-left: 5px;
-	padding-right: 5px;
-	/* 为行内代码的左右两侧分别添加5像素的内边距 */
+  border: none;          /* 完全移除边框，不显示任何边框线 */
+  border-radius: 5px;    /* 设置5像素圆角，使元素边缘呈现柔和弧度 */
+  background-color: rgba(100, 100, 50, 0.3);  /* 设置半透明背景色（红100,绿100,蓝50,透明度0.3） */
+  padding-left: 5px;     /* 左侧内边距5像素，避免文字紧贴左侧边缘 */
+  padding-right: 5px;    /* 右侧内边距5像素，保持内容与边界的呼吸空间 */
 }
 pre code {
 	border: none;
