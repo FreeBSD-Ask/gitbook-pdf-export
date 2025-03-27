@@ -10,37 +10,31 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import html as pygments_html_formatter
 from urllib.parse import urlparse
 
-# 获取当前工作目录的绝对路径
 BASE_DIR = os.path.abspath(os.getcwd())
 
-# 创建或清空 build 目录
 def prepare_build_dir(build_dir):
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
     os.makedirs(build_dir)
 
-# 读取 Markdown 文件内容
 def read_markdown_file(filename):
     with open(filename, 'r', encoding='utf-8') as file:
         return file.read()
 
-# 转换 Markdown 中的本地图片路径为绝对路径
 def convert_local_images(html_content, docdir):
     def replace_src(match):
         img_src = match.group(1)
         parsed_url = urlparse(img_src)
-
-        # 只有当路径不是 http 或 https 时才转换
         if not parsed_url.scheme:
-            # 处理相对路径，转换为绝对路径
+            # 处理相对于当前Markdown文件的路径
             abs_path = os.path.abspath(os.path.join(docdir, img_src))
+            # 转换Windows路径分隔符为URL格式
+            abs_path = abs_path.replace('\\', '/')
             return f'src="file://{abs_path}"'
         return match.group(0)
 
-    # 处理图片路径 (src="xxx")
     return re.sub(r'src="([^"]+)"', replace_src, html_content)
 
-# 自定义 Markdown 渲染器
 class CustomRenderer(mistune.HTMLRenderer):
     def heading(self, text, level, raw=None):
         return f'<h{level + 1}>{text}</h{level + 1}>'
@@ -57,16 +51,14 @@ class CustomRenderer(mistune.HTMLRenderer):
         return highlight(code, lexer, formatter)
 
     def strikethrough(self, text):
-        return f'<del>{text}</del>'  # 处理删除线标记
+        return f'<del>{text}</del>'
 
-# Markdown 转 HTML
 def markdown_to_html(markdown_text, docdir):
     renderer = CustomRenderer(escape=False)
-    markdown = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough'])  # 启用 strikethrough 插件
+    markdown = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough'])
     html_output = markdown(markdown_text)
     return convert_local_images(html_output, docdir)
 
-# 组合 Markdown 文件为 HTML
 def combine_markdown_to_html(docdir, input_files, output_file):
     combined_html = ''
 
@@ -74,19 +66,25 @@ def combine_markdown_to_html(docdir, input_files, output_file):
         if file.startswith('rawchaptertext:'):
             chaptername = file.replace('rawchaptertext:', '')
             html_output = f'<h1>{chaptername}</h1>\n'
-        else:
-            markdown_text = read_markdown_file(os.path.join(docdir, file))
-            print(f'Converting {file}')
-            html_output = markdown_to_html(markdown_text, docdir)
+            combined_html += html_output
+            continue
 
+        file_path = os.path.join(docdir, file)
+        if not os.path.exists(file_path):
+            print(f'Warning: File {file_path} does not exist, skipping')
+            continue
+
+        # 获取当前Markdown文件的所在目录
+        file_dir = os.path.dirname(file_path)
+        markdown_text = read_markdown_file(file_path)
+        print(f'Converting {file}')
+        html_output = markdown_to_html(markdown_text, file_dir)
         combined_html += html_output + '\n'
 
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(combined_html)
-
     print(f'Combined HTML saved to {output_file}')
 
-# 主函数
 def main(docdir):
     build_dir = 'build'
     prepare_build_dir(build_dir)
