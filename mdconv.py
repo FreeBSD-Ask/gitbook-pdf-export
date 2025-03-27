@@ -32,10 +32,12 @@ def convert_local_images(html_content, docdir):
 
         # 只有当路径不是 http 或 https 时才转换
         if not parsed_url.scheme:
+            # 处理相对路径，转换为绝对路径
             abs_path = os.path.abspath(os.path.join(docdir, img_src))
             return f'src="file://{abs_path}"'
         return match.group(0)
 
+    # 处理图片路径 (src="xxx")
     return re.sub(r'src="([^"]+)"', replace_src, html_content)
 
 # 自定义 Markdown 渲染器
