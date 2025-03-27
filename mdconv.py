@@ -54,10 +54,13 @@ class CustomRenderer(mistune.HTMLRenderer):
         formatter = pygments_html_formatter.HtmlFormatter()
         return highlight(code, lexer, formatter)
 
+    def strikethrough(self, text):
+        return f'<del>{text}</del>'  # 处理删除线标记
+
 # Markdown 转 HTML
 def markdown_to_html(markdown_text, docdir):
     renderer = CustomRenderer(escape=False)
-    markdown = mistune.create_markdown(renderer=renderer, plugins=['table'])
+    markdown = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough'])  # 启用 strikethrough 插件
     html_output = markdown(markdown_text)
     return convert_local_images(html_output, docdir)
 
