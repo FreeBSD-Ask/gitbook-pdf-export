@@ -1,143 +1,117 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="../highlight.css">
-  <style>
-    @font-face {
-      font-family: Noto Sans SC;
-      /* 使用@font-face引入自定义字体 'Noto Sans SC'，确保页面中使用该字体 */
-      src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
-      /* 指定字体的路径和格式，'opentype' 表示字体文件为 OpenType 格式 */
-    }
-    /* 同时设置行间距和段间距 */
-    p {
-      line-height: 1.5; /* 1.5 表示 1.5 倍行高 */
-      margin-bottom: 1.5em; /* 设置段间距 */
-      text-indent: 2em; /* 首行缩进 */
-    }
-    /* 设置所有链接的默认颜色 */
-    a {
-      color: #007FFF;
-    }
-    /* 可选：覆盖链接的其他状态（悬停、点击、已访问） */
-    a:hover,   /* 鼠标悬停 */
-    a:active,  /* 点击时 */
-    a:visited { /* 已访问过的链接 */
-      color: #007FFF;
-    }
-    /* 针对打印媒体设置分页规则 */
-    @media print {
-      h1 {page-break-before: always;} /* 打印时，h1元素之前进行分页 */
-      h2 {page-break-before: always;} /* 打印时，h2元素之前进行分页 */
-      /* 避免特定元素分页前后断开 */
-      .figure-container {
-        page-break-inside: avoid;
-        break-inside: avoid; /* 新的分页标准属性 */
-      }
-    }
-    body {
-      /* 设置整个页面的字体为 'Noto Sans SC'，确保统一的字体风格 */
-      font-family: Noto Sans SC;
-    }
-    table {
-      border: 2px solid; /* 设置表格的边框为2像素实线，默认颜色 */
-      border-radius: 8px; /* 设置表格的边框圆角为8像素，增加视觉美观性 */
-    }
-    table tr td {
-      border-right: 1px solid; /* 设置单元格右边框为1像素实线，分隔单元格 */
-      border-bottom: 1px solid; /* 设置单元格底部边框为1像素实线，分隔行 */
-      text-align: left; /* 将表格内容左对齐 */
-    }
-    table tr td:last-child {
-      border-right: 0px; /* 移除最后一个单元格的右边框，避免重复边框的视觉效果 */
-    }
-    table tr:last-child td {
-      border-bottom: 0px; /* 移除最后一行单元格的底部边框，保持表格的视觉一致性 */
-    }
-    table tr th {
-      border-bottom: 1px solid; /* 设置表头单元格的底部边框，分隔表头与表格内容 */
-      border-right: 1px solid; /* 设置表头单元格的右边框，分隔表头单元格 */
-      text-align: center; /* 将表头内容居中对齐 */
-    }
-    table tr th:last-child {
-      border-right: 0px; /* 移除表头最后一个单元格的右边框，避免重复边框 */
-    }
-    tr:nth-child(even) {
-      background-color: rgba(100,100,100,0.1); /* 设置偶数行的背景色为半透明的灰色 */
-    }
-    tr:nth-child(odd) {
-      background-color: rgba(255,255,255,0.3); /* 设置奇数行的背景色为半透明的白色 */
-    }
-    img {
-      max-width: 100%; /* 设置图片的最大宽度为容器的100%，确保图片不会超出其容器的宽度 */
-    }
-    pre {
-      white-space: pre-wrap;       /* 自动保留换行符，允许文本根据容器宽度自动换行 */
-      overflow-wrap: break-word;   /* 强制长单词/URL在容器边界处断行，防止内容溢出 */
-      font-size: 14px;             /* 设置代码块基础字号为14像素 */
-      padding: 10px;               /* 添加10像素内边距，增加内容呼吸空间 */
-      background-color: rgba(0, 100, 50, 0.1);  /* 半透明绿色背景 */
-      border-radius: 6px;          /* 6像素圆角，软化容器边缘 */
-      /* 已移除的边框样式 
-      border: 1px solid #ccc;      <- 此属性已被删除 */
-    }
-    code {
-      border: none;          /* 完全移除边框，不显示任何边框线 */
-      border-radius: 5px;    /* 设置5像素圆角，使元素边缘呈现柔和弧度 */
-      background-color: rgba(100, 100, 50, 0.1);  /* 设置半透明背景色 */
-      padding-left: 5px;     /* 左侧内边距5像素，避免文字紧贴左侧边缘 */
-      padding-right: 5px;    /* 右侧内边距5像素，保持内容与边界的呼吸空间 */
-    }
-    pre code {
-      border: none;         /* 移除预格式文本中的代码块的边框 */
-      background-color: transparent; /* 将预格式文本中的代码块背景色设置为透明 */
-    }
-    
-    /* 新增：防止容器内部分页拆分 */
-    .figure-container {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-  </style>
+	<meta charset="utf-8">
+	  <link rel="stylesheet" href="../highlight.css">
+<style>
+@font-face {
+	font-family:Noto Sans SC;
+	/* 使用@font-face引入自定义字体 'Noto Sans SC'，确保页面中使用该字体 */
+	src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
+	/* 指定字体的路径和格式，'opentype' 表示字体文件为 OpenType 格式 */
+}
+	/* 同时设置行间距和段间距 */
+p {
+  line-height: 1.5; /* 1.6 表示 1.6 倍行高 */
+  margin-bottom: 1.5em; /* 设置段间距 */
+}
+/* 设置所有链接的默认颜色 */
+a {
+  color: #007FFF;
+}
+
+/* 可选：覆盖链接的其他状态（悬停、点击等） */
+a:hover,   /* 鼠标悬停 */
+a:active,  /* 点击时 */
+a:visited { /* 已访问过的链接 */
+  color: #007FFF; 
+}
+/* 首行缩进 */
+p {
+  text-indent: 2em;
+}
+
+/* 进行分页的 summary 层级 */
+@media print {
+	/* 针对打印媒体设置分页规则 */
+	h1 {page-break-before: always;}
+	/* 在打印时，h1元素之前进行分页 */
+	h2 {page-break-before: always;}
+}
+body {
+	/* 设置整个页面的字体为 'Noto Sans SC'，确保统一的字体风格 */
+	font-family: Noto Sans SC;
+}
+table {
+	border: 2px solid;
+	/* 设置表格的边框为2像素实线，默认颜色 */
+	border-radius: 8px;
+	/* 设置表格的边框圆角为8像素，增加视觉美观性 */
+}
+table tr td {
+	border-right: 1px solid;
+	/* 设置单元格右边框为1像素实线，分隔单元格 */
+	border-bottom: 1px solid;
+	/* 设置单元格底部边框为1像素实线，分隔行 */
+	text-align: left;
+	/* 将表格内容左对齐 */
+}
+table tr td:last-child {
+	border-right: 0px;
+	/* 移除最后一个单元格的右边框，避免重复边框的视觉效果 */
+}
+table tr:last-child td {
+	border-bottom: 0px;
+	/* 移除最后一行单元格的底部边框，保持表格的视觉一致性 */
+}
+table tr th {
+	border-bottom: 1px solid;
+	/* 设置表头单元格的底部边框，分隔表头与表格内容 */
+	border-right: 1px solid;
+	/* 设置表头单元格的右边框，分隔表头单元格 */
+	text-align: center;
+	/* 将表头内容居中对齐 */
+}
+table tr th:last-child {
+	border-right: 0px;
+	/* 移除表头最后一个单元格的右边框，避免重复边框 */
+}
+tr:nth-child(even) {
+	background-color: rgba(100,100,100,0.1);
+	/* 设置偶数行的背景色为半透明的灰色 (rgba(100,100,100,0.1))，用于区分奇偶行 */
+}
+tr:nth-child(odd) {
+	background-color: rgba(255,255,255,0.3);
+	/* 设置奇数行的背景色为半透明的白色 (rgba(255,255,255,0.2))，用于区分奇偶行 */
+}
+img {
+	max-width: 100%;
+	/* 设置图片的最大宽度为容器的100%，确保图片不会超出其容器的宽度 */
+}
+pre {
+  white-space: pre-wrap;       /* 自动保留换行符，允许文本根据容器宽度自动换行 */
+  overflow-wrap: break-word;   /* 强制长单词/URL在容器边界处断行，防止内容溢出 */
+  font-size: 14px;             /* 设置代码块基础字号为14像素 */
+  padding: 10px;               /* 添加10像素内边距，增加内容呼吸空间 */
+  background-color: rgba(0, 100, 50, 0.1);  /* 半透明绿色背景、透明度0.1) */
+  border-radius: 6px;          /* 6像素圆角，软化容器边缘 */
+  
+  /* 已移除的边框样式 
+  border: 1px solid #ccc;      <- 此属性已被删除 */
+}
+code {
+  border: none;          /* 完全移除边框，不显示任何边框线 */
+  border-radius: 5px;    /* 设置5像素圆角，使元素边缘呈现柔和弧度 */
+  background-color: rgba(100, 100, 50, 0.1);  /* 设置半透明背景色、米黄色、透明度0.1） */
+  padding-left: 5px;     /* 左侧内边距5像素，避免文字紧贴左侧边缘 */
+  padding-right: 5px;    /* 右侧内边距5像素，保持内容与边界的呼吸空间 */
+}
+pre code {
+	border: none;
+	/* 移除预格式文本中的代码块的边框 */
+	background-color: transparent;
+	/* 将预格式文本中的代码块背景色设置为透明，避免与父级背景色冲突 */
+}
+</style>
 </head>
 <body>
-  <h1>如何避免打印页面出现大量空白</h1>
-  <p>在打印样式或分页布局中，经常会出现某个元素（例如一张图片或几行文本）独自占据一页，而页面其余部分留有大量空白的情况。下面提供几种解决方案：</p>
-  
-  <h2>1. 使用 <code>page-break-inside: avoid;</code></h2>
-  <p>将图片、图文组合或其他需要保持在同一页显示的内容用一个块级元素包裹，并为这个容器添加如下样式：</p>
-  <pre><code>
-.figure-container {
-  page-break-inside: avoid;
-  break-inside: avoid;
-}
-  </code></pre>
-  <p>这样可以确保整个容器在分页时不会被拆分到两个页面中，保持内容连贯。</p>
-  
-  <h2>2. 调整容器内的元素布局</h2>
-  <p>如果图片和文字可以组合在一起显示，建议使用如 Flexbox 或 Grid 布局，将它们放在同一个容器中，从而更好地分布页面内容，避免某一页只出现少量内容。</p>
-  
-  <h2>3. 控制分页规则</h2>
-  <p>在打印样式中，通过媒体查询 <code>@media print</code> 为标题或特定容器设置分页规则，避免在这些元素前后产生分页：</p>
-  <pre><code>
-@media print {
-  h1, h2, .figure-container {
-    page-break-before: avoid;
-    page-break-after: avoid;
-  }
-}
-  </code></pre>
-  
-  <h2>4. 调整页面边距或内容尺寸</h2>
-  <p>根据实际需要调整页面的整体边距、内边距以及图片和文本的尺寸，使页面内容更紧凑，从而减少因内容过少导致的空白区域。</p>
-  
-  <p>通过以上方法，你可以有效地控制打印或分页时的内容分布，避免出现只有一张图片和几行文字的空白页面。</p>
-  
-  <!-- 示例：将图片和文字放入同一个容器中 -->
-  <div class="figure-container">
-    <img src="example.jpg" alt="示例图片">
-    <p>这是示例图片的说明文字，说明图片内容以及与页面内容的关联。</p>
-  </div>
-</body>
-</html>
