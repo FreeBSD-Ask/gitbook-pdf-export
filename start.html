@@ -45,8 +45,8 @@
       h2 {page-break-before: always;} /* 打印时，h2元素之前进行分页 */
 
       /* 新增打印优化规则 */
-      h1, h2 {
-        page-break-after: avoid; /* 避免标题后立即分页 */
+     /*  h1 {
+        page-break-after: avoid; /* 避免标题后立即分页 */ */
       }
 
       /* 避免特定元素分页前后断开 */
@@ -61,8 +61,8 @@
 
       /* 新增打印边距优化 */
       body {
-        margin: 1cm; /* 减少默认边距(原约2.54cm) */
-        line-height: 1.3; /* 更紧凑的行高 */
+        margin: 2.54cm; /* 减少默认边距(原约2.54cm) */
+        line-height: 1.4; /* 更紧凑的行高 */
       }
 
       /* 新增图片尺寸控制 */
@@ -158,4 +158,3 @@
   </style>
 </head>
 </body>
-</html>
