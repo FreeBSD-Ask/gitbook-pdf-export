@@ -47,6 +47,8 @@
       /* 图片容器打印优化 */
       .figure-container {
         page-break-inside: avoid;  /* 防止图片容器内部分页 */
+        max-height: 10cm !important; /* 精确控制物理高度 */
+        margin: auto auto; /* 水平垂直居中 */
         break-inside: avoid;       /* 现代CSS分页控制 */
         display: block;           /* 确保块级显示 */
         margin: 0.5cm 0;          /* 增加垂直间距 */
@@ -60,8 +62,8 @@
 
       /* 打印图片约束 */
       .figure-container img {
-        max-height: 20cm !important;  /* 限制最大高度 */
-        max-width: 90% !important;    /* 限制最大宽度 */
+        max-height: 10cm !important;  /* 限制最大高度 */
+        max-width: 80% !important;    /* 限制最大宽度 */
         margin: 0 auto;               /* 图片水平居中 */
         object-fit: contain;          /* 保持图片比例 */
       }
