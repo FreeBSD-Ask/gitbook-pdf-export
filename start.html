@@ -1,117 +1,161 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8">
-	  <link rel="stylesheet" href="../highlight.css">
-<style>
-@font-face {
-	font-family:Noto Sans SC;
-	/* 使用@font-face引入自定义字体 'Noto Sans SC'，确保页面中使用该字体 */
-	src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
-	/* 指定字体的路径和格式，'opentype' 表示字体文件为 OpenType 格式 */
-}
-	/* 同时设置行间距和段间距 */
-p {
-  line-height: 1.5; /* 1.6 表示 1.6 倍行高 */
-  margin-bottom: 1.5em; /* 设置段间距 */
-}
-/* 设置所有链接的默认颜色 */
-a {
-  color: #007FFF;
-}
+  <meta charset="utf-8">
+  <title>如何避免打印页面空白</title>
+  <link rel="stylesheet" href="../highlight.css">
+  <style>
+    /* 使用@font-face引入自定义字体 'Noto Sans SC'，确保页面中使用该字体 */
+    @font-face {
+      font-family: Noto Sans SC;
+      /* 指定字体的路径和格式，'opentype' 表示字体文件为 OpenType 格式 */
+      src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
+    }
 
-/* 可选：覆盖链接的其他状态（悬停、点击等） */
-a:hover,   /* 鼠标悬停 */
-a:active,  /* 点击时 */
-a:visited { /* 已访问过的链接 */
-  color: #007FFF; 
-}
-/* 首行缩进 */
-p {
-  text-indent: 2em;
-}
+    /* 同时设置行间距和段间距 */
+    p {
+      line-height: 1.5; /* 1.5 表示 1.5 倍行高 */
+      margin-bottom: 1.5em; /* 设置段间距 */
+      text-indent: 2em; /* 首行缩进 */
+      /* 新增：控制段落孤行 */
+      orphans: 3; /* 段尾最少保留3行 */
+      widows: 3;  /* 段首最少保留3行 */
+    }
 
-/* 进行分页的 summary 层级 */
-@media print {
-	/* 针对打印媒体设置分页规则 */
-	h1 {page-break-before: always;}
-	/* 在打印时，h1元素之前进行分页 */
-	h2 {page-break-before: always;}
-}
-body {
-	/* 设置整个页面的字体为 'Noto Sans SC'，确保统一的字体风格 */
-	font-family: Noto Sans SC;
-}
-table {
-	border: 2px solid;
-	/* 设置表格的边框为2像素实线，默认颜色 */
-	border-radius: 8px;
-	/* 设置表格的边框圆角为8像素，增加视觉美观性 */
-}
-table tr td {
-	border-right: 1px solid;
-	/* 设置单元格右边框为1像素实线，分隔单元格 */
-	border-bottom: 1px solid;
-	/* 设置单元格底部边框为1像素实线，分隔行 */
-	text-align: left;
-	/* 将表格内容左对齐 */
-}
-table tr td:last-child {
-	border-right: 0px;
-	/* 移除最后一个单元格的右边框，避免重复边框的视觉效果 */
-}
-table tr:last-child td {
-	border-bottom: 0px;
-	/* 移除最后一行单元格的底部边框，保持表格的视觉一致性 */
-}
-table tr th {
-	border-bottom: 1px solid;
-	/* 设置表头单元格的底部边框，分隔表头与表格内容 */
-	border-right: 1px solid;
-	/* 设置表头单元格的右边框，分隔表头单元格 */
-	text-align: center;
-	/* 将表头内容居中对齐 */
-}
-table tr th:last-child {
-	border-right: 0px;
-	/* 移除表头最后一个单元格的右边框，避免重复边框 */
-}
-tr:nth-child(even) {
-	background-color: rgba(100,100,100,0.1);
-	/* 设置偶数行的背景色为半透明的灰色 (rgba(100,100,100,0.1))，用于区分奇偶行 */
-}
-tr:nth-child(odd) {
-	background-color: rgba(255,255,255,0.3);
-	/* 设置奇数行的背景色为半透明的白色 (rgba(255,255,255,0.2))，用于区分奇偶行 */
-}
-img {
-	max-width: 100%;
-	/* 设置图片的最大宽度为容器的100%，确保图片不会超出其容器的宽度 */
-}
-pre {
-  white-space: pre-wrap;       /* 自动保留换行符，允许文本根据容器宽度自动换行 */
-  overflow-wrap: break-word;   /* 强制长单词/URL在容器边界处断行，防止内容溢出 */
-  font-size: 14px;             /* 设置代码块基础字号为14像素 */
-  padding: 10px;               /* 添加10像素内边距，增加内容呼吸空间 */
-  background-color: rgba(0, 100, 50, 0.1);  /* 半透明绿色背景、透明度0.1) */
-  border-radius: 6px;          /* 6像素圆角，软化容器边缘 */
-  
-  /* 已移除的边框样式 
-  border: 1px solid #ccc;      <- 此属性已被删除 */
-}
-code {
-  border: none;          /* 完全移除边框，不显示任何边框线 */
-  border-radius: 5px;    /* 设置5像素圆角，使元素边缘呈现柔和弧度 */
-  background-color: rgba(100, 100, 50, 0.1);  /* 设置半透明背景色、米黄色、透明度0.1） */
-  padding-left: 5px;     /* 左侧内边距5像素，避免文字紧贴左侧边缘 */
-  padding-right: 5px;    /* 右侧内边距5像素，保持内容与边界的呼吸空间 */
-}
-pre code {
-	border: none;
-	/* 移除预格式文本中的代码块的边框 */
-	background-color: transparent;
-	/* 将预格式文本中的代码块背景色设置为透明，避免与父级背景色冲突 */
-}
-</style>
+    /* 设置所有链接的默认颜色 */
+    a {
+      color: #007FFF;
+      /* 新增：移除链接下划线 */
+      text-decoration: none; /* 删除默认下划线样式 */
+    }
+
+    /* 可选：覆盖链接的其他状态（悬停、点击、已访问） */
+    a:hover,   /* 鼠标悬停 */
+    a:active,  /* 点击时 */
+    a:visited { /* 已访问过的链接 */
+      color: #007FFF;
+      /* 新增：保持无下划线状态 */
+      text-decoration: none; /* 移除交互状态下的下划线 */
+    }
+
+    /* 针对打印媒体设置分页规则 */
+    @media print {
+      /* 原始分页规则保留 */
+      h1 {page-break-before: always;} /* 打印时，h1元素之前进行分页 */
+      h2 {page-break-before: always;} /* 打印时，h2元素之前进行分页 */
+
+      /* 新增打印优化规则 */
+      h1, h2 {
+        page-break-after: avoid; /* 避免标题后立即分页 */
+      }
+
+      /* 避免特定元素分页前后断开 */
+      .figure-container {
+        page-break-inside: avoid;
+        break-inside: avoid; /* 新的分页标准属性 */
+        /* 新增打印布局优化 */
+        max-height: 95vh; /* 限制容器高度不超过视口高度 */
+        display: inline-block; /* 紧凑布局模式 */
+        width: 100%; /* 保持容器宽度 */
+      }
+
+      /* 新增打印边距优化 */
+      body {
+        margin: 1cm; /* 减少默认边距(原约2.54cm) */
+        line-height: 1.3; /* 更紧凑的行高 */
+      }
+
+      /* 新增图片尺寸控制 */
+      .figure-container img {
+        max-height: 20cm; /* A4纸最大可用高度 */
+        object-fit: contain; /* 保持图片比例 */
+      }
+    }
+
+    /* 页面基础样式 */
+    body {
+      /* 设置整个页面的字体为 'Noto Sans SC'，确保统一的字体风格 */
+      font-family: Noto Sans SC;
+    }
+
+    /* 表格样式 */
+    table {
+      border: 2px solid; /* 设置表格的边框为2像素实线，默认颜色 */
+      border-radius: 8px; /* 设置表格的边框圆角为8像素，增加视觉美观性 */
+    }
+
+    table tr td {
+      border-right: 1px solid; /* 设置单元格右边框为1像素实线，分隔单元格 */
+      border-bottom: 1px solid; /* 设置单元格底部边框为1像素实线，分隔行 */
+      text-align: left; /* 将表格内容左对齐 */
+    }
+
+    table tr td:last-child {
+      border-right: 0px; /* 移除最后一个单元格的右边框，避免重复边框的视觉效果 */
+    }
+
+    table tr:last-child td {
+      border-bottom: 0px; /* 移除最后一行单元格的底部边框，保持表格的视觉一致性 */
+    }
+
+    table tr th {
+      border-bottom: 1px solid; /* 设置表头单元格的底部边框，分隔表头与表格内容 */
+      border-right: 1px solid; /* 设置表头单元格的右边框，分隔表头单元格 */
+      text-align: center; /* 将表头内容居中对齐 */
+    }
+
+    table tr th:last-child {
+      border-right: 0px; /* 移除表头最后一个单元格的右边框，避免重复边框 */
+    }
+
+    /* 表格斑马纹 */
+    tr:nth-child(even) {
+      background-color: rgba(100,100,100,0.1); /* 设置偶数行的背景色为半透明的灰色 */
+    }
+
+    tr:nth-child(odd) {
+      background-color: rgba(255,255,255,0.3); /* 设置奇数行的背景色为半透明的白色 */
+    }
+
+    /* 图片响应式处理 */
+    img {
+      max-width: 100%; /* 设置图片的最大宽度为容器的100%，确保图片不会超出其容器的宽度 */
+    }
+
+    /* 代码块样式 */
+    pre {
+      white-space: pre-wrap;       /* 自动保留换行符，允许文本根据容器宽度自动换行 */
+      overflow-wrap: break-word;   /* 强制长单词/URL在容器边界处断行，防止内容溢出 */
+      font-size: 14px;             /* 设置代码块基础字号为14像素 */
+      padding: 10px;               /* 添加10像素内边距，增加内容呼吸空间 */
+      background-color: rgba(0, 100, 50, 0.1);  /* 半透明绿色背景 */
+      border-radius: 6px;          /* 6像素圆角，软化容器边缘 */
+      /* 已移除的边框样式 
+      border: 1px solid #ccc;      <- 此属性已被删除 */
+    }
+
+    /* 行内代码样式 */
+    code {
+      border: none;          /* 完全移除边框，不显示任何边框线 */
+      border-radius: 5px;    /* 设置5像素圆角，使元素边缘呈现柔和弧度 */
+      background-color: rgba(100, 100, 50, 0.1);  /* 设置半透明背景色 */
+      padding-left: 5px;     /* 左侧内边距5像素，避免文字紧贴左侧边缘 */
+      padding-right: 5px;    /* 右侧内边距5像素，保持内容与边界的呼吸空间 */
+    }
+
+    /* 预格式化代码块特殊处理 */
+    pre code {
+      border: none;         /* 移除预格式文本中的代码块的边框 */
+      background-color: transparent; /* 将预格式文本中的代码块背景色设置为透明 */
+    }
+    
+    /* 防止容器内部分页拆分 */
+    .figure-container {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin: 1rem 0;  /* 新增容器外边距 */
+    }
+  </style>
 </head>
-<body>
+</body>
+</html>
