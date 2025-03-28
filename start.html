@@ -47,8 +47,7 @@
       /* 新增打印优化规则 */
      /*  h1 {
         page-break-after: avoid; /* 避免标题后立即分页 */ */
-      }
-
+      
       /* 避免特定元素分页前后断开 */
       .figure-container {
         page-break-inside: avoid;
@@ -67,7 +66,7 @@
 
       /* 新增图片尺寸控制 */
       .figure-container img {
-        max-height: 26cm; /* A4纸最大可用高度 */
+        max-height: 24cm; /* 修改：调整最大高度由26cm改为24cm，以避免一页仅出现一张图和少量文字 */
         object-fit: contain; /* 保持图片比例 */
       }
     }
@@ -158,3 +157,4 @@
   </style>
 </head>
 </body>
+
