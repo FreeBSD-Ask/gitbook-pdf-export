@@ -1,6 +1,6 @@
 # GitBook 项目 PDF 通用导出工具（GitBook Project Universal PDF Export Tool）
 
-作者为：safreya
+作者为：[safreya](https://github.com/safreya)
 
 gitbook 通用 PDF 导出工具。支持代码高亮。
 
