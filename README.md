@@ -10,8 +10,8 @@ gitbook 通用 PDF 导出工具。支持代码高亮。
 
 |文件/目录|说明|
 |:---:|:---:|
-|build|用于生成 PDF 的路径，默认不存在|
-|end.html|css 配置文件，不可删除|
+|build|用于生成 PDF 的路径，默认不存在，会自动生成|
+|end.html|CSS 配置文件，不可删除|
 |mdconv.py|主程序，不可删除|
 |start.html|主 CSS 配置文件，不可删除|
 
