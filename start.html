@@ -1,15 +1,14 @@
-<!DOCTYPE html>  <!-- 声明文档类型为HTML5 -->
-<html>  <!-- HTML根元素 -->
-<head>  <!-- 头部：包含元数据和样式 -->
-  <meta charset="utf-8">  <!-- 设置字符编码为UTF-8 -->
-  <title>如何避免打印页面空白</title>  <!-- 页面标题 -->
-  <link rel="stylesheet" href="../highlight.css">  <!-- 引入代码高亮样式 -->
-  <style>  /* 开始内联样式表 */
-    
+<!DOCTYPE html>
+<!-- HTML5文档类型声明 -->
+<html><!-- HTML根元素 -->
+<head><!-- 头部：包含元数据和样式 -->
+  <meta charset="utf-8"><!-- 设置UTF-8字符编码 -->
+  <link rel="stylesheet" href="../highlight.css"><!-- 代码高亮样式表 -->
+  <style>
     /* 自定义字体声明 */
     @font-face {
-      font-family: Noto Sans SC;  /* 定义字体名称 */
-      src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');  /* 字体文件路径和格式 */
+      font-family: Noto Sans SC;/* 定义字体名称 */
+      src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
     }
 
     /* 段落全局样式 */
@@ -17,213 +16,159 @@
       line-height: 1.5;         /* 1.5倍行高 */
       margin-bottom: 1.5em;     /* 段后间距1.5em */
       text-indent: 2em;         /* 首行缩进2字符 */
-      orphans: 3;               /* 段尾最少保留3行（防孤行） */
-      widows: 3;                /* 段首最少保留3行（防孤行） */
+      orphans: 3;               /* 段尾最少保留3行 */
+      widows: 3;                /* 段首最少保留3行 */
     }
 
-    /* 链接基础样式 */
-    a {
-      color: #007FFF;          /* 链接颜色 */
-      text-decoration: none;   /* 去除下划线 */
-    }
-
-    /* 链接状态覆盖 */
-    a:hover,
-    a:active,
-    a:visited {
-      color: #007FFF;          /* 保持颜色一致性 */
-      text-decoration: none;   /* 去除交互状态的下划线 */
+    /* 链接样式 */
+    a, a:hover, a:active, a:visited {
+      color: #007FFF;          /* 统一链接颜色 */
+      text-decoration: none;   /* 去除所有下划线 */
     }
 
     /* 打印样式优化 */
     @media print {
       /* 标题分页控制 */
-      h1 { 
-        page-break-before: always;  /* 强制在h1前分页 */
-        page-break-after: avoid;    /* 避免在h1后立即分页 */
-      }
-      h2 { page-break-before: always; }  /* 强制在h2前分页 */
-
-      /* 图片容器打印优化 */
+      h1, h2 { page-break-before: always; }
+      h1 { page-break-after: avoid; }
+      
+      /* 图片容器设置 */
       .figure-container {
-        page-break-inside: avoid;  /* 防止图片容器内部分页 */
-        max-height: 5cm !important; /* 精确控制物理高度 */
-        margin: auto auto; /* 水平垂直居中 */
-        break-inside: avoid;       /* 现代CSS分页控制 */
-        display: block;           /* 确保块级显示 */
-        margin: 0.5cm 0;          /* 增加垂直间距 */
+        page-break-inside: avoid;
+        break-inside: avoid;
+        max-height: 5cm !important;
+        margin: 0.5cm 0;
+        display: block;
       }
-  /* 选中状态 */
-  input[type="checkbox"]:checked {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-  
-  /* 选中状态伪元素 */
-  input[type="checkbox"]:checked::before {
-    content: "✓" !important; /* 改用简单对号 */
-    color: black !important;
-    font-size: 1.2em;
-    position: absolute;
-    left: 0;
-    top: -0.1em;
-  }
-  
-  /* 隐藏原始选中样式 */
-  input[type="checkbox"]:checked {
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
-  }
-      /* 移除 checkbox 默认样式 */
-input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: 1.2em;
-  height: 1.2em;
-  position: relative;
-  cursor: pointer;
-  border: none;
-  background: none;
-  outline: none;
-  display: inline-flex;
-  align-items: center;
-  vertical-align: middle;
-}
-/* 取消焦点样式，防止黑框 */
-input[type="checkbox"]:focus {
-  outline: none;
-  box-shadow: none;
-}
+      
+      /* 复选框样式优化 */
+      input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 1.2em;
+        height: 1.2em;
+        position: relative;
+        vertical-align: middle;
+      }
+      
+      input[type="checkbox"]:checked {
+        border: none !important;
+        background: transparent !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+      }
+      
+      input[type="checkbox"]::before {
+        content: "⬜";
+        font-size: 1.2em;
+        display: inline-block;
+      }
+      
+      input[type="checkbox"]:checked::before {
+        content: "✓" !important;
+        color: black !important;
+        font-size: 1.2em;
+        position: absolute;
+        left: 0;
+        top: -0.1em;
+      }
 
-/* 伪元素模拟 checkbox */
-input[type="checkbox"]::before {
-  content: "⬜";
-  font-size: 1.2em;
-  display: inline-block;
-  line-height: 1;
-}
-      /* 处理 Firefox 默认焦点边框 */
-input[type="checkbox"]::-moz-focus-inner {
-  border: none;
-}
-
-
-/* 选中状态 */
-input[type="checkbox"]:checked::before {
-  content: "✅";
-}
-
-/* 让 checkbox 和文字在同一行 */
-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 1em; /* 控制间距 */
-}
-
-
-      /* 打印页面基础设置 */
+      /* 打印基础设置 */
       body {
-        margin: 0.3cm !important;  /* 缩小页面边距 */
-        line-height: 1.3;         /* 稍紧凑的行高 */
+        margin: 0.3cm !important;
+        line-height: 1.3;
       }
 
-      /* 打印图片约束 */
+      /* 图片约束 */
       .figure-container img {
-        max-height: 5cm !important;  /* 限制最大高度 */
-        max-width: 50% !important;    /* 限制最大宽度 */
-        margin: 0 auto;               /* 图片水平居中 */
-        object-fit: contain;          /* 保持图片比例 */
+        max-height: 5cm !important;
+        max-width: 50% !important;
+        margin: 0 auto;
+        object-fit: contain;
       }
     }
 
     /* 基础页面样式 */
     body {
-      font-family: Noto Sans SC;  /* 应用自定义字体 */
+      font-family: Noto Sans SC;
     }
 
     /* 表格整体样式 */
     table {
-      border: 2px solid;          /* 表格边框 */
-      border-radius: 8px;        /* 圆角边框 */
-      margin: 0 auto;             /* 表格水平居中 */
+      border: 2px solid;
+      border-radius: 8px;
+      margin: 0 auto;
     }
-    /* 表格图片缩放 */
+    
+    /* 表格单元格样式 */
+    table tr td {
+      border-right: 1px solid;
+      border-bottom: 1px solid;
+      text-align: left;
+    }
+        /* 表格图片缩放 */
+
     table img {
     max-width: 100% !important;
     }
-
-    /* 表格单元格样式 */
-    table tr td {
-      border-right: 1px solid;   /* 右侧边框 */
-      border-bottom: 1px solid;  /* 底部边框 */
-      text-align: left;          /* 左对齐文本 */
-    }
-    table tr td:last-child {
-      border-right: 0px;         /* 最后一列去右侧边框 */
-    }
-    table tr:last-child td {
-      border-bottom: 0px;        /* 最后一行去底部边框 */
-    }
-
-    /* 表头样式 */
+    
     table tr th {
-      border-bottom: 1px solid;  /* 底部边框 */
-      border-right: 1px solid;   /* 右侧边框 */
-      text-align: center;        /* 居中对齐 */
+      border-bottom: 1px solid;
+      border-right: 1px solid;
+      text-align: center;
     }
+    
+    /* 表格特殊边框处理 */
+    table tr td:last-child,
     table tr th:last-child {
-      border-right: 0px;         /* 最后一列表头去右侧边框 */
+      border-right: 0px;
+    }
+    
+    table tr:last-child td {
+      border-bottom: 0px;
     }
 
-    /* 斑马纹表格 */
-    tr:nth-child(even) {
-      background-color: rgba(100,100,100,0.1);  /* 偶数行背景色 */
-    }
-    tr:nth-child(odd) {
-      background-color: rgba(255,255,255,0.3);  /* 奇数行背景色 */
-    }
+    /* 斑马纹效果 */
+    tr:nth-child(even) { background-color: rgba(100,100,100,0.1); }
+    tr:nth-child(odd) { background-color: rgba(255,255,255,0.3); }
 
-    /* 响应式图片，设置此处才有用 */
+    /* 响应式图片 */
     img {
-      max-width: 75%;  /* 图片最大宽度限制 */
-      display: block;  /* 设为块级元素 */
-      margin: 0 auto;  /* 水平居中 */
+      max-width: 75%;
+      display: block;
+      margin: 0 auto;
     }
 
     /* 代码块样式 */
     pre {
-      white-space: pre-wrap;     /* 保留空格自动换行 */
-      overflow-wrap: break-word; /* 长单词换行 */
-      font-size: 14px;           /* 代码字号 */
-      padding: 10px;             /* 内边距 */
-      background-color: rgba(0, 100, 50, 0.1);  /* 浅绿色背景 */
-      border-radius: 6px;        /* 圆角 */
-    }
-
-    /* 行内代码样式 */
-    code {
-      border: none;              /* 无边框 */
-      border-radius: 5px;        /* 圆角 */
-      background-color: rgba(100, 100, 50, 0.1);  /* 浅黄色背景 */
-      padding-left: 5px;        /* 左右内边距 */
-      padding-right: 5px;
-    }
-
-    /* 代码块内部代码样式重置 */
-    pre code {
-      border: none;             /* 移除边框 */
-      background-color: transparent;  /* 透明背景 */
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      font-size: 14px;
+      padding: 10px;
+      background-color: rgba(0, 100, 50, 0.1);
+      border-radius: 6px;
     }
     
-    /* 图片容器通用样式 */
+    code {
+      border-radius: 5px;
+      background-color: rgba(100, 100, 50, 0.1);
+      padding: 0 5px;
+    }
+
+    pre code {
+      border: none;
+      background-color: transparent;
+    }
+
+    /* 图片容器通用设置 */
     .figure-container {
-      page-break-inside: avoid;  /* 打印时避免分页 */
-      break-inside: avoid;      /* 现代浏览器分页控制 */
-      margin: 1rem 0;          /* 垂直外边距 */
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin: 1rem 0;
     }
   </style>
 </head>
-</body> 
+<body>
+</body>
 </html>
