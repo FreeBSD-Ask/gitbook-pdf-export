@@ -53,7 +53,28 @@
         display: block;           /* 确保块级显示 */
         margin: 0.5cm 0;          /* 增加垂直间距 */
       }
-
+  /* 选中状态 */
+  input[type="checkbox"]:checked {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  /* 选中状态伪元素 */
+  input[type="checkbox"]:checked::before {
+    content: "✓" !important; /* 改用简单对号 */
+    color: black !important;
+    font-size: 1.2em;
+    position: absolute;
+    left: 0;
+    top: -0.1em;
+  }
+  
+  /* 隐藏原始选中样式 */
+  input[type="checkbox"]:checked {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
       /* 移除 checkbox 默认样式 */
 input[type="checkbox"] {
   appearance: none;
