@@ -53,17 +53,24 @@
         display: block;           /* 确保块级显示 */
         margin: 0.5cm 0;          /* 增加垂直间距 */
       }
-/* 隐藏原始的 checkbox */
+
+      /* 移除 checkbox 默认样式 */
 input[type="checkbox"] {
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   width: 1.2em;
   height: 1.2em;
   position: relative;
   cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
 }
+/* 取消焦点样式，防止黑框 */
 input[type="checkbox"]:focus {
   outline: none;
   box-shadow: none;
@@ -76,6 +83,11 @@ input[type="checkbox"]::before {
   display: inline-block;
   line-height: 1;
 }
+      /* 处理 Firefox 默认焦点边框 */
+input[type="checkbox"]::-moz-focus-inner {
+  border: none;
+}
+
 
 /* 选中状态 */
 input[type="checkbox"]:checked::before {
