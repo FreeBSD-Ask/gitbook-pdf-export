@@ -159,12 +159,15 @@ def main(docdir):
         f.write(merged_content)
     print(f'Merged HTML saved to {final_html}')
     
-    # 生成PDF
+    # 生成PDF，设置 zoom 提高渲染分辨率至300PPI，同时生成 PDF/A-4 (PDF 2.0) 文件
     print('Generating PDF (this may take a while)...')
     font_config = FontConfiguration()
     HTML(final_html).write_pdf(
         f'{build_dir}/final.pdf',
-        font_config=font_config
+        font_config=font_config,
+        zoom=300/96,           # 将默认96PPI转换为300PPI
+        pdf_version="2.0",     # 指定PDF版本为2.0
+        pdfa=True            # 要求生成PDF/A合规文件（PDF/A-4）
     )
     print(f'PDF generated: {build_dir}/final.pdf')
 
