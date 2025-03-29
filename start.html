@@ -9,11 +9,16 @@
     /* 自定义字体声明 */
     @font-face {
 	/* 通用中文字体栈 */
-        font-family:SinoFont;
-	src:local("Microsoft YaHei"),local("PingFang SC"),local("Hiragino Sans GB");
-	local("WenQuanYi Micro Hei");
-	local("Noto Sans CJK SC");
+        font-family:Microsoft YaHei;
+	src:local("Microsoft YaHei"),local("PingFang SC"),local("Hiragino Sans GB")，local("WenQuanYi Micro Hei")，local("Noto Sans CJK SC");
 	font-display:swap;
+}
+     /* 基础页面样式 */
+    body {
+	font-family:"Microsoft YaHei","Segoe UI","San Francisco","Roboto",SinoFont,"PingFang SC",sans-serif !important;
+	/* 强制继承 */
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
 }
 /* 段落全局样式 */
     p {
@@ -127,12 +132,6 @@ label {
 	margin:0 auto;
 	object-fit:contain;
 }
-}/* 基础页面样式 */
-    body {
-	font-family:"Segoe UI","San Francisco","Roboto",SinoFont,"Microsoft YaHei","PingFang SC",sans-serif !important;
-	/* 强制继承 */
-    -webkit-print-color-adjust:exact;
-	print-color-adjust:exact;
 }
 /* 表格整体样式 */
     table {
