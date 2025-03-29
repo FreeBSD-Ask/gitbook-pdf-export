@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- HTML5文档类型声明 -->
 <html><!-- HTML根元素 -->
@@ -7,217 +8,199 @@
   <style>
     /* 自定义字体声明 */
     @font-face {
-  /* 通用中文字体栈 */
-        font-family: SinoFont;
-  src: 
-    local("Microsoft YaHei"),
-    local("PingFang SC"),
-    local("Hiragino Sans GB");
-    local("WenQuanYi Micro Hei");
-     local("Noto Sans CJK SC");
-  font-display: swap;
-    }
-
-    /* 段落全局样式 */
+	/* 通用中文字体栈 */
+        font-family:SinoFont;
+	src:local("Microsoft YaHei"),local("PingFang SC"),local("Hiragino Sans GB");
+	local("WenQuanYi Micro Hei");
+	local("Noto Sans CJK SC");
+	font-display:swap;
+}
+/* 段落全局样式 */
     p {
-      line-height: 1.5;         /* 1.5倍行高 */
-      margin-bottom: 1.5em;     /* 段后间距1.5em */
-      text-indent: 2em;         /* 首行缩进2字符 */
-      orphans: 3;               /* 段尾最少保留3行 */
-      widows: 3;                /* 段首最少保留3行 */
-    }
-
-    /* 链接样式 */
-    a, a:hover, a:active, a:visited {
-      color: #007FFF;          /* 统一链接颜色 */
-      text-decoration: none;   /* 去除所有下划线 */
-    }
-
-    /* 打印样式优化 */
+	line-height:1.5;
+	/* 1.5倍行高 */
+      margin-bottom:1.5em;
+	/* 段后间距1.5em */
+      text-indent:2em;
+	/* 首行缩进2字符 */
+      orphans:3;
+	/* 段尾最少保留3行 */
+      widows:3;
+	/* 段首最少保留3行 */
+}
+/* 链接样式 */
+    a,a:hover,a:active,a:visited {
+	color:#007FFF;
+	/* 统一链接颜色 */
+      text-decoration:none;
+	/* 去除所有下划线 */
+}
+/* 打印样式优化 */
     @media print {
-      /* 标题分页控制 */
-      h1, h2 { page-break-before: always; }
-      h1 { page-break-after: avoid; }
-      
-      /* 图片容器设置 */
+	/* 标题分页控制 */
+      h1,h2 {
+	page-break-before:always;
+}
+h1 {
+	page-break-after:avoid;
+}
+/* 图片容器设置 */
       .figure-container {
-        page-break-inside: avoid;
-        break-inside: avoid;
-        max-height: 5cm !important;
-        margin: 0.5cm 0;
-        display: block;
-      }
-  /* 选中状态 */
+	page-break-inside:avoid;
+	break-inside:avoid;
+	max-height:5cm !important;
+	margin:0.5cm 0;
+	display:block;
+}
+/* 选中状态 */
   input[type="checkbox"]:checked {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-  
-  /* 选中状态伪元素 */
+	border:none !important;
+	background:transparent !important;
+	box-shadow:none !important;
+}
+/* 选中状态伪元素 */
   input[type="checkbox"]:checked::before {
-    content: "✅" !important; /* 改用简单对号 */
-    color: black !important;
-    font-size: 1.2em;
-    display: inline-block;
-    line-height: 1;
-  }
-  
-  /* 隐藏原始选中样式 */
+	content:"✅" !important;
+	/* 改用简单对号 */
+    color:black !important;
+	font-size:1.2em;
+	display:inline-block;
+	line-height:1;
+}
+/* 隐藏原始选中样式 */
   input[type="checkbox"]:checked {
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
-  }
-      /* 移除 checkbox 默认样式 */
+	-webkit-print-color-adjust:exact;
+	color-adjust:exact;
+}
+/* 移除 checkbox 默认样式 */
 input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: 1.2em;
-  height: 1.2em;
-  position: relative;
-  cursor: pointer;
-  border: none;
-  background: none;
-  outline: none;
-  display: inline-flex;
-  align-items: center;
-  vertical-align: middle;
+	appearance:none;
+	-webkit-appearance:none;
+	-moz-appearance:none;
+	width:1.2em;
+	height:1.2em;
+	position:relative;
+	cursor:pointer;
+	border:none;
+	background:none;
+	outline:none;
+	display:inline-flex;
+	align-items:center;
+	vertical-align:middle;
 }
 /* 取消焦点样式，防止黑框 */
 input[type="checkbox"]:focus {
-  outline: none;
-  box-shadow: none;
+	outline:none;
+	box-shadow:none;
 }
-
 /* 伪元素模拟 checkbox */
 input[type="checkbox"]::before {
-  content: "⬜";
-  font-size: 1.2em;
-  display: inline-block;
-  line-height: 1;
+	content:"⬜";
+	font-size:1.2em;
+	display:inline-block;
+	line-height:1;
 }
-      /* 处理 Firefox 默认焦点边框 */
+/* 处理 Firefox 默认焦点边框 */
 input[type="checkbox"]::-moz-focus-inner {
-  border: none;
+	border:none;
 }
-
-
 /* 选中状态 */
 input[type="checkbox"]:checked::before {
-  content: "✅";
+	content:"✅";
 }
-
 /* 让 checkbox 和文字在同一行 */
 label {
-  display: inline-flex;
-  align-items: center;
-  gap: 1em; /* 控制间距 */
+	display:inline-flex;
+	align-items:center;
+	gap:1em;
+	/* 控制间距 */
 }
-
-      /* 打印基础设置 */
+/* 打印基础设置 */
       body {
-        margin: 0.3cm !important;
-        line-height: 1.3;
-      }
-
-      /* 图片约束 */
+	margin:0.3cm !important;
+	line-height:1.3;
+}
+/* 图片约束 */
       .figure-container img {
-        max-height: 5cm !important;
-        max-width: 50% !important;
-        margin: 0 auto;
-        object-fit: contain;
-      }
-    }
-
-    /* 基础页面样式 */
+	max-height:5cm !important;
+	max-width:50% !important;
+	margin:0 auto;
+	object-fit:contain;
+}
+}/* 基础页面样式 */
     body {
-        font-family: 
-    "Segoe UI",
-    "San Francisco",
-    "Roboto",
-    SinoFont,
-    "Microsoft YaHei", 
-    "PingFang SC", 
-    sans-serif !important; /* 强制继承 */
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-    /* 表格整体样式 */
+	font-family:"Segoe UI","San Francisco","Roboto",SinoFont,"Microsoft YaHei","PingFang SC",sans-serif !important;
+	/* 强制继承 */
+    -webkit-print-color-adjust:exact;
+	print-color-adjust:exact;
+}
+/* 表格整体样式 */
     table {
-      border: 2px solid;
-      border-radius: 8px;
-      margin: 0 auto;
-    }
-    
-    /* 表格单元格样式 */
+	border:2px solid;
+	border-radius:8px;
+	margin:0 auto;
+}
+/* 表格单元格样式 */
     table tr td {
-      border-right: 1px solid;
-      border-bottom: 1px solid;
-      text-align: left;
-    }
-        /* 表格图片缩放 */
+	border-right:1px solid;
+	border-bottom:1px solid;
+	text-align:left;
+}
+/* 表格图片缩放 */
 
     table img {
-    max-width: 100% !important;
-    }
-    
-    table tr th {
-      border-bottom: 1px solid;
-      border-right: 1px solid;
-      text-align: center;
-    }
-    
-    /* 表格特殊边框处理 */
-    table tr td:last-child,
-    table tr th:last-child {
-      border-right: 0px;
-    }
-    
-    table tr:last-child td {
-      border-bottom: 0px;
-    }
-
-    /* 斑马纹效果 */
-    tr:nth-child(even) { background-color: rgba(100,100,100,0.1); }
-    tr:nth-child(odd) { background-color: rgba(255,255,255,0.3); }
-
-    /* 响应式图片 */
+	max-width:100% !important;
+}
+table tr th {
+	border-bottom:1px solid;
+	border-right:1px solid;
+	text-align:center;
+}
+/* 表格特殊边框处理 */
+    table tr td:last-child,table tr th:last-child {
+	border-right:0px;
+}
+table tr:last-child td {
+	border-bottom:0px;
+}
+/* 斑马纹效果 */
+    tr:nth-child(even) {
+	background-color:rgba(100,100,100,0.1);
+}
+tr:nth-child(odd) {
+	background-color:rgba(255,255,255,0.3);
+}
+/* 响应式图片 */
     img {
-      max-width: 75%;
-      display: block;
-      margin: 0 auto;
-    }
-
-    /* 代码块样式 */
+	max-width:75%;
+	display:block;
+	margin:0 auto;
+}
+/* 代码块样式 */
     pre {
-      white-space: pre-wrap;
-      overflow-wrap: break-word;
-      font-size: 14px;
-      padding: 10px;
-      background-color: rgba(0, 100, 50, 0.1);
-      border-radius: 6px;
-    }
-    
-    code {
-      border-radius: 5px;
-      background-color: rgba(100, 100, 50, 0.1);
-      padding: 0 5px;
-    }
-
-    pre code {
-      border: none;
-      background-color: transparent;
-    }
-
-    /* 图片容器通用设置 */
+	white-space:pre-wrap;
+	overflow-wrap:break-word;
+	font-size:14px;
+	padding:10px;
+	background-color:rgba(0,100,50,0.1);
+	border-radius:6px;
+}
+code {
+	border-radius:5px;
+	background-color:rgba(100,100,50,0.1);
+	padding:0 5px;
+}
+pre code {
+	border:none;
+	background-color:transparent;
+}
+/* 图片容器通用设置 */
     .figure-container {
-      page-break-inside: avoid;
-      break-inside: avoid;
-      margin: 1rem 0;
-    }
-  </style>
+	page-break-inside:avoid;
+	break-inside:avoid;
+	margin:1rem 0;
+}
+</style>
 </head>
 <body>
 </body>
