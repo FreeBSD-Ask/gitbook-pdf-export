@@ -24,24 +24,36 @@ def read_markdown_file(filename):
     with open(filename, 'r', encoding='utf-8') as file:
         return file.read()
 
-def convert_local_images(html_content, docdir):
-    """将本地图片路径转换为绝对路径"""
+def convert_local_paths(html_content, docdir):
+    """处理本地图片路径和链接路径"""
     def replace_src(match):
-        img_src = match.group(1)
-        parsed_url = urlparse(img_src)
+        attr_value = match.group(1)
+        parsed_url = urlparse(attr_value)
         if not parsed_url.scheme:  # 处理本地路径
-            abs_path = os.path.abspath(os.path.join(docdir, img_src))
-            return f'src="file://{abs_path.replace("\\", "/")}"'
+            # 处理图片路径
+            if match.group(0).startswith('src="'):
+                abs_path = os.path.abspath(os.path.join(docdir, attr_value))
+                return f'src="file://{abs_path.replace("\\", "/")}"'
+            # 处理文档链接
+            elif match.group(0).startswith('href="'):
+                if attr_value.endswith('.md'):
+                    anchor = os.path.splitext(attr_value)[0]
+                    return f'href="#{anchor}"'
+                elif '.md#' in attr_value:
+                    return f'href="#{attr_value.split("#")[1]}"'
         return match.group(0)
     
-    return re.sub(r'src="([^"]+)"', replace_src, html_content)
+    html_content = re.sub(r'src="([^"]+)"', replace_src, html_content)
+    html_content = re.sub(r'href="([^"]+)"', replace_src, html_content)
+    return html_content
 
 class CustomRenderer(mistune.HTMLRenderer):
     """自定义Markdown渲染器"""
     
     def heading(self, text, level, raw=None):
-        """调整标题层级（+1）"""
-        return f'<h{level + 1}>{text}</h{level + 1}>'
+        """为标题添加锚点"""
+        anchor_id = re.sub(r'[^\w]+', '-', text.lower()).strip('-')
+        return f'<h{level + 1} id="{anchor_id}">{text}</h{level + 1}>'
     
     def block_code(self, code, info=None):
         """代码块高亮处理"""
@@ -61,28 +73,23 @@ class CustomRenderer(mistune.HTMLRenderer):
     
     def list_item(self, text):
         """处理任务列表项（[x] 或 [ ]）"""
-        # 严格匹配以 [x]/[ ] 开头且后跟空格的语法
-        checkbox_pattern = re.compile(r'^\s*\[([ xX]?)\]\s+')
+        checkbox_pattern = re.compile(r'^\s*\[([ xX?]?)\]\s+')
         match = checkbox_pattern.match(text)
         if match:
-            # 提取复选框状态
             checked = 'checked' if match.group(1).strip().lower() == 'x' else ''
-            # 移除复选框标记并保留内容
             text = text[match.end():].lstrip()
             return f'<li><input type="checkbox" disabled {checked}> {text}</li>'
-        # 普通列表项使用默认处理
         return super().list_item(text)
 
 def markdown_to_html(markdown_text, docdir):
     """将Markdown转换为HTML"""
     renderer = CustomRenderer(escape=False)
-    # 启用表格和删除线插件
     markdown = mistune.create_markdown(
         renderer=renderer,
         plugins=['table', 'strikethrough']
     )
     html_output = markdown(markdown_text)
-    return convert_local_images(html_output, docdir)
+    return convert_local_paths(html_output, docdir)
 
 def combine_markdown_to_html(docdir, input_files, output_file):
     """合并多个Markdown文件为单个HTML"""
@@ -90,20 +97,22 @@ def combine_markdown_to_html(docdir, input_files, output_file):
     
     for file in input_files:
         if file.startswith('rawchaptertext:'):
-            # 处理原始章节文本
             chaptername = file.replace('rawchaptertext:', '')
-            combined_html += f'<h1>{chaptername}</h1>\n'
+            anchor_id = re.sub(r'[^\w]+', '-', chaptername.lower()).strip('-')
+            combined_html += f'<a id="{anchor_id}"></a>\n<h1>{chaptername}</h1>\n'
             continue
             
         file_path = os.path.join(docdir, file)
         if not os.path.exists(file_path):
             print(f'Warning: File {file_path} does not exist, skipping')
             continue
+
+        # 添加基于文件名的锚点
+        anchor_id = os.path.splitext(file)[0]
+        combined_html += f'<a id="{anchor_id}"></a>\n'
             
-        # 获取文件所在目录用于图片路径处理
         file_dir = os.path.dirname(file_path)
         markdown_text = read_markdown_file(file_path)
-        print(f'Converting {file}')
         html_output = markdown_to_html(markdown_text, file_dir)
         combined_html += html_output + '\n'
     
