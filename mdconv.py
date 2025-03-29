@@ -165,9 +165,7 @@ def main(docdir):
     HTML(final_html).write_pdf(
         f'{build_dir}/final.pdf',
         font_config=font_config,
-        zoom=300/96,           # 将默认96PPI转换为300PPI
         pdf_version="2.0",     # 指定PDF版本为2.0
-        pdfa=True            # 要求生成PDF/A合规文件（PDF/A-4）
     )
     print(f'PDF generated: {build_dir}/final.pdf')
 
