@@ -55,16 +55,19 @@
       }
 /* 隐藏原始的 checkbox */
 input[type="checkbox"] {
-  appearance: none; /* 移除默认样式 */
+  appearance: none;
   width: 1.2em;
   height: 1.2em;
   position: relative;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
 }
 
-/* 使用 ::before 伪元素模拟 checkbox 状态 */
+/* 伪元素模拟 checkbox */
 input[type="checkbox"]::before {
-  content: "⬜"; /* 默认未选中 */
+  content: "⬜";
   font-size: 1.2em;
   display: inline-block;
   line-height: 1;
@@ -74,6 +77,14 @@ input[type="checkbox"]::before {
 input[type="checkbox"]:checked::before {
   content: "✅";
 }
+
+/* 让 checkbox 和文字在同一行 */
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 1em; /* 控制间距 */
+}
+
 
       /* 打印页面基础设置 */
       body {
