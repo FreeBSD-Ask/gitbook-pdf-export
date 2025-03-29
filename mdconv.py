@@ -9,7 +9,6 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import html as pygments_html_formatter
 from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
 
 # 基础目录设置
 BASE_DIR = os.path.abspath(os.getcwd())
@@ -47,11 +46,9 @@ class CustomRenderer(mistune.HTMLRenderer):
     def block_code(self, code, info=None):
         """代码块高亮处理"""
         if info:
-            print(f"Info: {info}")  # 调试输出，查看传入的info
             try:
                 lexer = get_lexer_by_name(info.strip(), stripall=True)
-            except Exception as e:
-                print(f"Lexer error for {info}: {e}")
+            except Exception:
                 lexer = get_lexer_by_name('text', stripall=True)
         else:
             lexer = get_lexer_by_name('text', stripall=True)
@@ -87,28 +84,28 @@ def markdown_to_html(markdown_text, docdir):
     html_output = markdown(markdown_text)
     return convert_local_images(html_output, docdir)
 
-def process_markdown_file(file, docdir):
-    """处理单个Markdown文件并转换为HTML"""
-    file_path = os.path.join(docdir, file)
-    if not os.path.exists(file_path):
-        print(f'Warning: File {file_path} does not exist, skipping')
-        return ''
-    
-    # 获取文件所在目录用于图片路径处理
-    file_dir = os.path.dirname(file_path)
-    markdown_text = read_markdown_file(file_path)
-    print(f'Converting {file}')
-    html_output = markdown_to_html(markdown_text, file_dir)
-    return html_output
-
 def combine_markdown_to_html(docdir, input_files, output_file):
     """合并多个Markdown文件为单个HTML"""
-    html_parts = []
+    combined_html = ''
     
-    with ThreadPoolExecutor() as executor:
-        html_parts = list(executor.map(lambda file: process_markdown_file(file, docdir), input_files))
-
-    combined_html = ''.join(html_parts)
+    for file in input_files:
+        if file.startswith('rawchaptertext:'):
+            # 处理原始章节文本
+            chaptername = file.replace('rawchaptertext:', '')
+            combined_html += f'<h1>{chaptername}</h1>\n'
+            continue
+            
+        file_path = os.path.join(docdir, file)
+        if not os.path.exists(file_path):
+            print(f'Warning: File {file_path} does not exist, skipping')
+            continue
+            
+        # 获取文件所在目录用于图片路径处理
+        file_dir = os.path.dirname(file_path)
+        markdown_text = read_markdown_file(file_path)
+        print(f'Converting {file}')
+        html_output = markdown_to_html(markdown_text, file_dir)
+        combined_html += html_output + '\n'
     
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(combined_html)
