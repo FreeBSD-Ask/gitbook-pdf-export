@@ -7,8 +7,10 @@
   <style>
     /* 自定义字体声明 */
     @font-face {
-      font-family: Noto Sans SC;/* 定义字体名称 */
-      src: url('/usr/local/share/fonts/noto/NotoSansSC-Thin.otf') format('opentype');
+        font-family: Noto Sans SC; /* 定义字体名称 */
+  src: url('./fonts/NotoSansSC-Thin.woff2') format('woff2'),
+       url('./fonts/NotoSansSC-Thin.woff') format('woff');
+  font-display: swap;
     }
 
     /* 段落全局样式 */
@@ -125,8 +127,10 @@ label {
 
     /* 基础页面样式 */
     body {
-      font-family: Noto Sans SC;
-    }
+      font-family: Noto Sans SC, sans-serif !important; /* 强制继承 */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
     /* 表格整体样式 */
     table {
