@@ -40,39 +40,74 @@
         margin: 0.5cm 0;
         display: block;
       }
-      
-      /* 复选框样式优化 */
-      input[type="checkbox"] {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        width: 1.2em;
-        height: 1.2em;
-        position: relative;
-        vertical-align: middle;
-      }
-      
-      input[type="checkbox"]:checked {
-        border: none !important;
-        background: transparent !important;
-        -webkit-print-color-adjust: exact;
-        color-adjust: exact;
-      }
-      
-      input[type="checkbox"]::before {
-        content: "⬜";
-        font-size: 1.2em;
-        display: inline-block;
-      }
-      
-      input[type="checkbox"]:checked::before {
-        content: "✅" !important;
-        color: black !important;
-        font-size: 1.2em;
-        position: absolute;
-        left: 0;
-        top: -0.1em;
-      }
+  /* 选中状态 */
+  input[type="checkbox"]:checked {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  /* 选中状态伪元素 */
+  input[type="checkbox"]:checked::before {
+    content: "✓" !important; /* 改用简单对号 */
+    color: black !important;
+    font-size: 1.2em;
+    position: absolute;
+    left: 0;
+    top: -0.1em;
+  }
+  
+  /* 隐藏原始选中样式 */
+  input[type="checkbox"]:checked {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+      /* 移除 checkbox 默认样式 */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 1.2em;
+  height: 1.2em;
+  position: relative;
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+/* 取消焦点样式，防止黑框 */
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 伪元素模拟 checkbox */
+input[type="checkbox"]::before {
+  content: "⬜";
+  font-size: 1.2em;
+  display: inline-block;
+  line-height: 1;
+}
+      /* 处理 Firefox 默认焦点边框 */
+input[type="checkbox"]::-moz-focus-inner {
+  border: none;
+}
+
+
+/* 选中状态 */
+input[type="checkbox"]:checked::before {
+  content: "✅";
+}
+
+/* 让 checkbox 和文字在同一行 */
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 1em; /* 控制间距 */
+}
 
       /* 打印基础设置 */
       body {
