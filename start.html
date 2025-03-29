@@ -7,10 +7,15 @@
   <style>
     /* 自定义字体声明 */
     @font-face {
-        font-family: Noto Sans SC; /* 定义字体名称 */
-  src: url('./fonts/NotoSansSC-Thin.woff2') format('woff2'),
-       url('./fonts/NotoSansSC-Thin.woff') format('woff');
-  font-display: swap;
+  /* 通用中文字体栈 */
+  font-family: 
+    "Microsoft YaHei",       /* Win8+ 微软雅黑 */
+    "PingFang SC",          /* macOS 苹方 */
+    "Hiragino Sans GB",     /* macOS 老版本 */
+    "WenQuanYi Micro Hei",  /* Linux 文泉驿 */
+    "Noto Sans CJK SC",     /* 谷歌思源字体 */
+    "Source Han Sans SC",   /* Adobe思源黑体 */
+    sans-serif;             /* 最终兜底 */
     }
 
     /* 段落全局样式 */
@@ -127,7 +132,9 @@ label {
 
     /* 基础页面样式 */
     body {
-      font-family: Noto Sans SC, sans-serif !important; /* 强制继承 */
+          "Microsoft YaHei", 
+      "PingFang SC", 
+      sans-serif !important; /* 强制继承 */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
