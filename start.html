@@ -20,6 +20,21 @@
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
 }
+	  /* 仿 GitHub 的引用样式 */
+blockquote {
+  margin: 0.8em 0;
+  padding-left: 1em;
+  border-left: 0.25em solid #d0d7de;
+  color: #656d76;
+}
+
+/* 处理嵌套引用样式 */
+blockquote blockquote {
+  margin: 0.5em 0;
+  padding-left: 1em;
+  border-left: 0.25em solid #d0d7de;
+}
+
 /* 段落全局样式 */
     p {
 	line-height:1.5;
@@ -164,10 +179,10 @@ table tr:last-child td {
 }
 /* 斑马纹效果 */
     tr:nth-child(even) {
-	background-color:rgba(100,100,100,0.1);
+	background-color:rgba(100,100,100,0.05);
 }
 tr:nth-child(odd) {
-	background-color:rgba(255,255,255,0.3);
+	background-color:rgba(255,255,255,0.05);
 }
 /* 响应式图片 */
     img {
@@ -181,12 +196,12 @@ tr:nth-child(odd) {
 	overflow-wrap:break-word;
 	font-size:14px;
 	padding:10px;
-	background-color:rgba(0,100,50,0.1);
+	background-color:rgba(0,100,50,0.05);
 	border-radius:6px;
 }
 code {
 	border-radius:5px;
-	background-color:rgba(100,100,50,0.1);
+	background-color:rgba(100,100,50,0.05);
 	padding:0 5px;
 }
 pre code {
