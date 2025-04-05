@@ -81,7 +81,7 @@ h1 {
 /* 选中状态伪元素 */
   input[type="checkbox"]:checked::before {
 	content:"✅" !important;
-	/* 改用简单对号 */
+	/* 改用✅ */
     color:black !important;
 	font-size:1.2em;
 	display:inline-block;
@@ -124,10 +124,7 @@ input[type="checkbox"]::before {
 input[type="checkbox"]::-moz-focus-inner {
 	border:none;
 }
-/* 选中状态 */
-input[type="checkbox"]:checked::before {
-	content:"✅";
-}
+
 /* 让 checkbox 和文字在同一行 */
 label {
 	display:inline-flex;
