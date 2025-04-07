@@ -15,7 +15,6 @@ from pathlib import Path
 BUILD_DIR = 'build'
 SUMMARY_FILE = 'SUMMARY.md'
 START_HTML = 'start.html'
-END_HTML = 'end.html'
 FINAL_HTML = 'final.html'
 FINAL_PDF = 'final.pdf'
 
@@ -131,7 +130,7 @@ def main(docdir: str) -> None:
     """主处理流程"""
     prepare_build_dir(BUILD_DIR)
     
-    # 处理SUMMARY.md
+    # 处理 SUMMARY.md
     summary_path = os.path.join(docdir, SUMMARY_FILE)
     with open(summary_path, 'r', encoding='utf-8') as file:
         content = file.read()
@@ -156,11 +155,10 @@ def main(docdir: str) -> None:
     output_file = os.path.join(BUILD_DIR, 'combined.html')
     combine_markdown_to_html(docdir, file_paths, output_file)
     
-    # 合并头尾 HTML
+    # 合并 start.html 和 combined.html
     with open(START_HTML, 'r', encoding='utf-8') as f1, \
-         open(output_file, 'r', encoding='utf-8') as f2, \
-         open(END_HTML, 'r', encoding='utf-8') as f3:
-        merged_content = f1.read() + '\n' + f2.read() + '\n' + f3.read()
+         open(output_file, 'r', encoding='utf-8') as f2:
+        merged_content = f1.read() + '\n' + f2.read()
     
     final_html_path = os.path.join(BUILD_DIR, FINAL_HTML)
     with open(final_html_path, 'w', encoding='utf-8') as f:
