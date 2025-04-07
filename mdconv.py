@@ -9,6 +9,7 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import html as pygments_html_formatter
 from urllib.parse import urlparse
+from pathlib import Path
 
 # 基础目录设置
 BASE_DIR = os.path.abspath(os.getcwd())
@@ -33,7 +34,8 @@ def convert_local_paths(html_content, docdir):
             # 处理图片路径
             if match.group(0).startswith('src="'):
                 abs_path = os.path.abspath(os.path.join(docdir, attr_value))
-                return f'src="file://{abs_path.replace("\\", "/")}"'
+                file_url = Path(abs_path).as_uri()  # 自动生成正确格式的文件 URL
+                return f'src="{file_url}"'
             # 处理文档链接
             elif match.group(0).startswith('href="'):
                 if attr_value.endswith('.md'):
