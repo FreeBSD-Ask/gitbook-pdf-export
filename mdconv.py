@@ -11,21 +11,26 @@ from pygments.formatters import html as pygments_html_formatter
 from urllib.parse import urlparse
 from pathlib import Path
 
-# 基础目录设置
-BASE_DIR = os.path.abspath(os.getcwd())
+# 常量定义
+BUILD_DIR = 'build'
+SUMMARY_FILE = 'SUMMARY.md'
+START_HTML = 'start.html'
+END_HTML = 'end.html'
+FINAL_HTML = 'final.html'
+FINAL_PDF = 'final.pdf'
 
-def prepare_build_dir(build_dir):
+def prepare_build_dir(build_dir: str) -> None:
     """准备构建目录，清理旧文件"""
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
     os.makedirs(build_dir)
 
-def read_markdown_file(filename):
+def read_markdown_file(filename: str) -> str:
     """读取Markdown文件内容"""
     with open(filename, 'r', encoding='utf-8') as file:
         return file.read()
 
-def convert_local_paths(html_content, docdir):
+def convert_local_paths(html_content: str, docdir: str) -> str:
     """处理本地图片路径和链接路径"""
     def replace_src(match):
         attr_value = match.group(1)
@@ -52,12 +57,12 @@ def convert_local_paths(html_content, docdir):
 class CustomRenderer(mistune.HTMLRenderer):
     """自定义Markdown渲染器"""
     
-    def heading(self, text, level, raw=None):
+    def heading(self, text: str, level: int, raw: str = None) -> str:
         """为标题添加锚点"""
         anchor_id = re.sub(r'[^\w]+', '-', text.lower()).strip('-')
         return f'<h{level + 1} id="{anchor_id}">{text}</h{level + 1}>'
     
-    def block_code(self, code, info=None):
+    def block_code(self, code: str, info: str = None) -> str:
         """代码块高亮处理"""
         if info:
             try:
@@ -69,11 +74,11 @@ class CustomRenderer(mistune.HTMLRenderer):
         formatter = pygments_html_formatter.HtmlFormatter()
         return highlight(code, lexer, formatter)
     
-    def strikethrough(self, text):
+    def strikethrough(self, text: str) -> str:
         """删除线语法支持"""
         return f'<del>{text}</del>'
     
-    def list_item(self, text):
+    def list_item(self, text: str) -> str:
         """处理任务列表项（[x] 或 [ ]）"""
         checkbox_pattern = re.compile(r'^\s*\[([ xX?]?)\]\s+')
         match = checkbox_pattern.match(text)
@@ -83,7 +88,7 @@ class CustomRenderer(mistune.HTMLRenderer):
             return f'<li><input type="checkbox" disabled {checked}> {text}</li>'
         return super().list_item(text)
 
-def markdown_to_html(markdown_text, docdir):
+def markdown_to_html(markdown_text: str, docdir: str) -> str:
     """将Markdown转换为HTML"""
     renderer = CustomRenderer(escape=False)
     markdown = mistune.create_markdown(
@@ -93,7 +98,7 @@ def markdown_to_html(markdown_text, docdir):
     html_output = markdown(markdown_text)
     return convert_local_paths(html_output, docdir)
 
-def combine_markdown_to_html(docdir, input_files, output_file):
+def combine_markdown_to_html(docdir: str, input_files: list, output_file: str) -> None:
     """合并多个Markdown文件为单个HTML"""
     combined_html = ''
     
@@ -122,13 +127,13 @@ def combine_markdown_to_html(docdir, input_files, output_file):
         file.write(combined_html)
     print(f'Combined HTML saved to {output_file}')
 
-def main(docdir):
+def main(docdir: str) -> None:
     """主处理流程"""
-    build_dir = 'build'
-    prepare_build_dir(build_dir)
+    prepare_build_dir(BUILD_DIR)
     
     # 处理SUMMARY.md
-    with open(os.path.join(docdir, 'SUMMARY.md'), 'r', encoding='utf-8') as file:
+    summary_path = os.path.join(docdir, SUMMARY_FILE)
+    with open(summary_path, 'r', encoding='utf-8') as file:
         content = file.read()
     
     # 将二级标题转换为伪章节
@@ -139,37 +144,38 @@ def main(docdir):
         flags=re.MULTILINE
     )
     
-    # 生成中间summary.md
-    with open(f'{build_dir}/summary.md', 'w', encoding='utf-8') as file:
+    # 生成中间 summary.md
+    summary_build_path = os.path.join(BUILD_DIR, 'summary.md')
+    with open(summary_build_path, 'w', encoding='utf-8') as file:
         file.write(summary_content)
     
     # 提取文件路径列表
     file_paths = re.findall(r'\[.*?\]\((.*?)\)', summary_content)
     
-    # 生成中间HTML
-    output_file = f'{build_dir}/combined.html'
+    # 生成中间 HTML
+    output_file = os.path.join(BUILD_DIR, 'combined.html')
     combine_markdown_to_html(docdir, file_paths, output_file)
     
-    # 合并头尾HTML
-    with open('start.html', 'r', encoding='utf-8') as f1, \
+    # 合并头尾 HTML
+    with open(START_HTML, 'r', encoding='utf-8') as f1, \
          open(output_file, 'r', encoding='utf-8') as f2, \
-         open('end.html', 'r', encoding='utf-8') as f3:
+         open(END_HTML, 'r', encoding='utf-8') as f3:
         merged_content = f1.read() + '\n' + f2.read() + '\n' + f3.read()
     
-    final_html = f'{build_dir}/final.html'
-    with open(final_html, 'w', encoding='utf-8') as f:
+    final_html_path = os.path.join(BUILD_DIR, FINAL_HTML)
+    with open(final_html_path, 'w', encoding='utf-8') as f:
         f.write(merged_content)
-    print(f'Merged HTML saved to {final_html}')
+    print(f'Merged HTML saved to {final_html_path}')
     
     # 生成 PDF 2.0
     print('Generating PDF (this may take a while)...')
     font_config = FontConfiguration()
-    HTML(final_html).write_pdf(
-        f'{build_dir}/final.pdf',
+    HTML(final_html_path).write_pdf(
+        os.path.join(BUILD_DIR, FINAL_PDF),
         font_config=font_config,
         pdf_version="2.0",     # 指定PDF版本为2.0
     )
-    print(f'PDF generated: {build_dir}/final.pdf')
+    print(f'PDF generated: {os.path.join(BUILD_DIR, FINAL_PDF)}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate PDF from Markdown documents')
