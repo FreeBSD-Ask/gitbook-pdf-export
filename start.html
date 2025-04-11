@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <!-- HTML5文档类型声明 -->
 <html><!-- HTML根元素 -->
@@ -8,224 +7,235 @@
   <style>
     /* 自定义字体声明 */
     @font-face {
-	/* 通用中文字体栈 */
-        font-family:WenQuanYi Micro Hei;
-	src:local("WenQuanYi Micro Hei"),local("PingFang SC"),local("Hiragino Sans GB")，local("Noto Sans CJK SC")，local("Microsoft YaHei");
-	font-display:swap;
-}
+        /* 通用中文字体栈 */
+        font-family: WenQuanYi Micro Hei;
+        src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
+        font-display: swap;
+    }
 
-/* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */
-.highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
-    font-style: normal;
-}
-     /* 基础页面样式 */
+    /* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */
+    .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
+        font-style: normal;
+    }
+
+    /* 基础页面样式 */
     body {
-	font-family:"WenQuanYi Micro Hei","Segoe UI","San Francisco","Roboto",SinoFont,"PingFang SC",sans-serif !important;
-	/* 强制继承 */
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact;
-/* 正文字号 5 号字 */
-    font-size: 14px;
-}
-strong, b {
+        font-family: "WenQuanYi Micro Hei","Segoe UI","San Francisco","Roboto",SinoFont,"PingFang SC",sans-serif !important;
+        /* 强制继承 */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        /* 正文字号 5 号字 */
+        font-size: 14px;
+    }
 
-font-family: "Noto Sans CJK SC", sans-serif;
-  font-weight: bold;
-  /*font-size: 1.2em;      放大字号（可以调为 1.2em 或更大） */
+    strong, b {
+        font-family: "Noto Sans CJK SC", sans-serif;
+        font-weight: bold;
+        /* font-size: 1.2em;      放大字号（可以调为 1.2em 或更大） */
+    }
 
-}
+    /* 仿 GitHub 的引用样式 */
+    blockquote {
+        margin: 0.8em 0;
+        padding-left: 1em;
+        border-left: 0.25em solid #d0d7de;
+        color: #656d76;
+    }
 
-	  /* 仿 GitHub 的引用样式 */
-blockquote {
-  margin: 0.8em 0;
-  padding-left: 1em;
-  border-left: 0.25em solid #d0d7de;
-  color: #656d76;
-}
+    /* 处理嵌套引用样式 */
+    blockquote blockquote {
+        margin: 0.5em 0;
+        padding-left: 1em;
+        border-left: 0.25em solid #d0d7de;
+    }
 
-/* 处理嵌套引用样式 */
-blockquote blockquote {
-  margin: 0.5em 0;
-  padding-left: 1em;
-  border-left: 0.25em solid #d0d7de;
-}
-/* 段落全局样式 */
+    /* 段落全局样式 */
     p {
-	line-height:1.5;
-	/* 1.5倍行高 */
-      margin-bottom:1em;
-	/* 段后间距1em */
-      text-indent:2em;
-	/* 首行缩进2字符 */
-      orphans:3;
-	/* 段尾最少保留3行 */
-      widows:3;
-	/* 段首最少保留3行 */
-}
-/* 链接样式 */
-    a,a:hover,a:active,a:visited {
-	color:#007FFF;
-	/* 统一链接颜色 */
-      text-decoration:none;
-	/* 去除所有下划线 */
-}
-/* 打印样式优化 */
+        line-height: 1.5;
+        /* 1.5倍行高 */
+        margin-bottom: 1em;
+        /* 段后间距1em */
+        text-indent: 2em;
+        /* 首行缩进2字符 */
+        orphans: 3;
+        /* 段尾最少保留3行 */
+        widows: 3;
+        /* 段首最少保留3行 */
+    }
+
+    /* 链接样式 */
+    a, a:hover, a:active, a:visited {
+        color: #007FFF;
+        /* 统一链接颜色 */
+        text-decoration: none;
+        /* 去除所有下划线 */
+    }
+
+    /* 打印样式优化 */
     @media print {
-	/* 标题分页控制 */
-      h1,h2 {
-	page-break-before:always;
-}
-h1 {
-	page-break-after:avoid;
-}
-/* 图片容器设置 */
-      .figure-container {
-	page-break-inside:avoid;
-	break-inside:avoid;
-	max-height:5cm !important;
-	margin:0.5cm 0;
-	display:block;
-}
-/* 选中状态 */
-  input[type="checkbox"]:checked {
-	border:none !important;
-	background:transparent !important;
-	box-shadow:none !important;
-}
-/* 选中状态伪元素 */
-  input[type="checkbox"]:checked::before {
-	content:"✅" !important;
-	/* 改用✅ */
-    color:black !important;
-	font-size:1.2em;
-	display:inline-block;
-	line-height:1;
-}
-/* 隐藏原始选中样式 */
-  input[type="checkbox"]:checked {
-	-webkit-print-color-adjust:exact;
-	color-adjust:exact;
-}
-/* 移除 checkbox 默认样式 */
-input[type="checkbox"] {
-	appearance:none;
-	-webkit-appearance:none;
-	-moz-appearance:none;
-	width:1.2em;
-	height:1.2em;
-	position:relative;
-	cursor:pointer;
-	border:none;
-	background:none;
-	outline:none;
-	display:inline-flex;
-	align-items:center;
-	vertical-align:middle;
-}
-/* 取消焦点样式，防止黑框 */
-input[type="checkbox"]:focus {
-	outline:none;
-	box-shadow:none;
-}
-/* 伪元素模拟 checkbox */
-input[type="checkbox"]::before {
-	content:"⬜";
-	font-size:1.2em;
-	display:inline-block;
-	line-height:1;
-}
-/* 处理 Firefox 默认焦点边框 */
-input[type="checkbox"]::-moz-focus-inner {
-	border:none;
-}
+        /* 标题分页控制 */
+        h1, h2 {
+            page-break-before: always;
+        }
+        h1 {
+            page-break-after: avoid;
+        }
 
-/* 让 checkbox 和文字在同一行 */
-label {
-	display:inline-flex;
-	align-items:center;
-	gap:1em;
-	/* 控制间距 */
-}
-/* 打印基础设置 */
-      body {
-	margin:0.3cm !important;
-	line-height:1.3;
-}
-/* 图片约束 */
-      .figure-container img {
-	max-height:5cm !important;
-	max-width:50% !important;
-	margin:0 auto;
-	object-fit:contain;
-}
-}
-/* 表格整体样式 */
+        /* 图片容器设置 */
+        .figure-container {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            max-height: 5cm !important;
+            margin: 0.5cm 0;
+            display: block;
+        }
+
+        /* 选中状态 */
+        input[type="checkbox"]:checked {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* 选中状态伪元素 */
+        input[type="checkbox"]:checked::before {
+            content: "✅" !important;
+            /* 改用✅ */
+            color: black !important;
+            font-size: 1.2em;
+            display: inline-block;
+            line-height: 1;
+        }
+
+        /* 隐藏原始选中样式 */
+        input[type="checkbox"]:checked {
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+        }
+
+        /* 移除 checkbox 默认样式 */
+        input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 1.2em;
+            height: 1.2em;
+            position: relative;
+            cursor: pointer;
+            border: none;
+            background: none;
+            outline: none;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+        }
+
+        /* 取消焦点样式，防止黑框 */
+        input[type="checkbox"]:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        /* 伪元素模拟 checkbox */
+        input[type="checkbox"]::before {
+            content: "⬜";
+            font-size: 1.2em;
+            display: inline-block;
+            line-height: 1;
+        }
+
+        /* 处理 Firefox 默认焦点边框 */
+        input[type="checkbox"]::-moz-focus-inner {
+            border: none;
+        }
+
+        /* 让 checkbox 和文字在同一行 */
+        label {
+            display: inline-flex;
+            align-items: center;
+            gap: 1em;
+            /* 控制间距 */
+        }
+
+        /* 打印基础设置 */
+        body {
+            margin: 0.3cm !important;
+            line-height: 1.3;
+        }
+
+        /* 图片约束 */
+        .figure-container img {
+            max-height: 5cm !important;
+            max-width: 50% !important;
+            margin: 0 auto;
+            object-fit: contain;
+        }
+    }
+
+    /* 表格整体样式 - 修改为三线表 */
     table {
-	border:2px solid;
-	border-radius:8px;
-	margin:0 auto;
-}
-/* 表格单元格样式 */
-    table tr td {
-	border-right:1px solid;
-	border-bottom:1px solid;
-	text-align:left;
-}
-/* 表格图片缩放 */
+        border-top: 2px solid;      /* 顶线 */
+        border-bottom: 2px solid;   /* 底线 */
+        border-collapse: collapse;   /* 合并边框 */
+        border-radius: 0;            /* 去除圆角 */
+        margin: 0 auto;
+    }
 
-    table img {
-	max-width:100% !important;
-}
-table tr th {
-	border-bottom:1px solid;
-	border-right:1px solid;
-	text-align:center;
-}
-/* 表格特殊边框处理 */
-    table tr td:last-child,table tr th:last-child {
-	border-right:0px;
-}
-table tr:last-child td {
-	border-bottom:0px;
-}
-/* 斑马纹效果 */
-    tr:nth-child(even) {
-	background-color:rgba(100,100,100,0.05);
-}
-tr:nth-child(odd) {
-	background-color:rgba(255,255,255,0.05);
-}
-/* 响应式图片 */
+    /* 单元格通用样式 */
+    table tr td {
+        border: none !important;     /* 移除所有默认边框 */
+        padding: 8px;                /* 增加单元格内边距 */
+        text-align: left;
+    }
+
+    /* 表头特殊样式 */
+    table tr th {
+        border-bottom: 1px solid !important;  /* 中间线 */
+        border: none !important;
+        text-align: center;
+    }
+
+    /* 移除斑马纹效果 */
+    tr:nth-child(even),
+    tr:nth-child(odd) {
+        background-color: transparent !important;
+    }
+
+    /* 响应式图片 */
     img {
-	max-width:75%;
-	display:block;
-	margin:0 auto;
-}
-/* 代码块样式 */
+        max-width: 75%;
+        display: block;
+        margin: 0 auto;
+    }
+
+    /* 代码块样式 */
     pre {
-	white-space:pre-wrap;
-	overflow-wrap:break-word;
-	font-size:14px;
-	padding:10px;
-	background-color:rgba(0,100,50,0.05);
-	border-radius:6px;
-}
-code {
-	border-radius:5px;
-	background-color:rgba(100,100,50,0.05);
-	padding:0 5px;
-}
-pre code {
-	border:none;
-	background-color:transparent;
-}
-/* 图片容器通用设置 */
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        font-size: 14px;
+        padding: 10px;
+        background-color: rgba(0,100,50,0.05);
+        border-radius: 6px;
+    }
+
+    code {
+        border-radius: 5px;
+        background-color: rgba(100,100,50,0.05);
+        padding: 0 5px;
+    }
+
+    pre code {
+        border: none;
+        background-color: transparent;
+    }
+
+    /* 图片容器通用设置 */
     .figure-container {
-	page-break-inside:avoid;
-	break-inside:avoid;
-	margin:1rem 0;
-}
-</style>
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin: 1rem 0;
+    }
+  </style>
 </head>
 <body>
 </body>
