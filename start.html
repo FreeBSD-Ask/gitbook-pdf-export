@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- HTML5文档类型声明 -->
 <html><!-- HTML根元素 -->
 <head><!-- 头部：包含元数据和样式 -->
   <meta charset="utf-8"><!-- 设置UTF-8字符编码 -->
@@ -172,26 +171,29 @@
         }
     }
 
-    /* 表格整体样式 - 修改为三线表 */
+    /* 三线表核心样式 */
     table {
-        border-top: 2px solid;      /* 顶线 */
-        border-bottom: 2px solid;   /* 底线 */
-        border-collapse: collapse;   /* 合并边框 */
-        border-radius: 0;            /* 去除圆角 */
+        border-top: 2px solid #000;     /* 顶线 (第1线) */
+        border-bottom: 2px solid #000;  /* 底线 (第3线) */
+        border-collapse: collapse;     /* 合并边框 */
         margin: 0 auto;
+        width: 100%;
+    }
+
+    /* 表头下方添加分隔线 */
+    table tr:first-child th {
+        border-bottom: 1px solid #000 !important;  /* 中间线 (第2线) */
     }
 
     /* 单元格通用样式 */
-    table tr td {
-        border: none !important;     /* 移除所有默认边框 */
-        padding: 8px;                /* 增加单元格内边距 */
+    table tr td, table tr th {
+        border: none !important;       /* 移除所有默认边框 */
+        padding: 8px;                  /* 单元格内边距 */
         text-align: left;
     }
 
-    /* 表头特殊样式 */
+    /* 表头文字居中 */
     table tr th {
-        border-bottom: 1px solid !important;  /* 中间线 */
-        border: none !important;
         text-align: center;
     }
 
