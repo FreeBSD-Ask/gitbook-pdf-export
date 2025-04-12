@@ -171,6 +171,7 @@ def main(docdir: str) -> None:
     HTML(final_html_path).write_pdf(
         os.path.join(BUILD_DIR, FINAL_PDF),
         font_config=font_config,
+        full_fonts=True,
         pdf_version="2.0",     # 指定PDF版本为2.0
         pdf_variant="pdf/a-4u", # 测试 pdf/a-4u
         metadata=True,
