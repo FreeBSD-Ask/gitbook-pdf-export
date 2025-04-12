@@ -173,6 +173,7 @@ def main(docdir: str) -> None:
         font_config=font_config,
         pdf_version="2.0",     # 指定PDF版本为2.0
         pdf_variant="pdf/a-4u", # 测试 pdf/a-4u
+        metadata=True,
     )
     print(f'PDF generated: {os.path.join(BUILD_DIR, FINAL_PDF)}')
 
