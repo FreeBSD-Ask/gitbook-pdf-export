@@ -11,12 +11,42 @@
         src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
         font-display: swap;
     }
+    /* 新增代码块基础字体配置 */
+pre, code, .highlight, .highlight pre {
+  font-family: "WenQuanYi Micro Hei", 
+               "Noto Sans Mono CJK SC",
+               "Source Han Mono", 
+               monospace !important; /* 强制覆盖字体 */
+  line-height: 125%;
+}
+    .highlight .powershell { 
+  font-family: "WenQuanYi Micro Hei", "Cascadia Mono", monospace !important;
+}
+    td.linenos .normal { 
+  color: inherit; 
+  background-color: transparent;
+  padding-left: 5px;
+  padding-right: 5px;
+  font-family: inherit; /* 新增：继承代码块字体 */
+}
+span.linenos { 
+  color: inherit;
+  background-color: transparent;
+  padding-left: 5px;
+  padding-right: 5px;
+  font-family: inherit; /* 新增：继承代码块字体 */
+}
 
-    /* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */
-    .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
-        font-style: normal;
-    }
-
+    /* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */ 
+.highlight .c,
+.highlight .ch,
+.highlight .cm,
+.highlight .cpf,
+.highlight .c1,
+.highlight .cs {
+  font-style: normal !important; /* 强制取消斜体 */
+  font-family: inherit !important; /* 确保继承中文字体 */
+}
     /* 基础页面样式 */
     body {
         font-family: "WenQuanYi Micro Hei","Segoe UI","San Francisco","Roboto",SinoFont,"PingFang SC",sans-serif !important;
