@@ -2,14 +2,15 @@ import os
 import shutil
 import re
 import argparse
+import hashlib
+from urllib.parse import urlparse, unquote
+from pathlib import Path
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 import mistune
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import html as pygments_html_formatter
-from urllib.parse import urlparse
-from pathlib import Path
 
 # 常量定义
 BUILD_DIR = 'build'
@@ -17,12 +18,15 @@ SUMMARY_FILE = 'SUMMARY.md'
 START_HTML = 'start.html'
 FINAL_HTML = 'final.html'
 FINAL_PDF = 'final.pdf'
+IMAGES_DIR = os.path.join(BUILD_DIR, 'images')
 
 def prepare_build_dir(build_dir: str) -> None:
     """准备构建目录，清理旧文件"""
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
     os.makedirs(build_dir)
+    # 创建 images 目录用于存放转换文件名后的图片
+    os.makedirs(IMAGES_DIR, exist_ok=True)
 
 def read_markdown_file(filename: str) -> str:
     """读取Markdown文件内容"""
@@ -30,23 +34,45 @@ def read_markdown_file(filename: str) -> str:
         return file.read()
 
 def convert_local_paths(html_content: str, docdir: str) -> str:
-    """处理本地图片路径和链接路径"""
+    """处理本地图片路径和链接路径
+       当图片文件名（不含扩展名）包含非英文和非数字字符时，
+       转换为哈希值，并复制到构建目录下的 images 文件夹中。
+       对传入的路径先进行 URL 解码，从而避免因编码问题找不到文件
+    """
     def replace_src(match):
         attr_value = match.group(1)
-        parsed_url = urlparse(attr_value)
-        if not parsed_url.scheme:  # 处理本地路径
+        # 先对路径进行 URL 解码
+        decoded_attr_value = unquote(attr_value)
+        parsed_url = urlparse(decoded_attr_value)
+        # 仅处理本地路径（无 scheme）
+        if not parsed_url.scheme:
             # 处理图片路径
             if match.group(0).startswith('src="'):
-                abs_path = os.path.abspath(os.path.join(docdir, attr_value))
-                file_url = Path(abs_path).as_uri()  # 自动生成正确格式的文件 URL
+                abs_path = os.path.abspath(os.path.join(docdir, decoded_attr_value))
+                base_name = os.path.basename(abs_path)
+                name, ext = os.path.splitext(base_name)
+                # 判断文件名（不含扩展名）是否仅包含英文字母和数字
+                if not re.match(r'^[A-Za-z0-9]+$', name):
+                    # 转换为 MD5 哈希值作为新的文件名
+                    hash_val = hashlib.md5(name.encode('utf-8')).hexdigest()
+                    new_file_name = hash_val + ext
+                    new_file_path = os.path.join(IMAGES_DIR, new_file_name)
+                    try:
+                        shutil.copy(abs_path, new_file_path)
+                    except Exception as e:
+                        print(f'Error copying {abs_path} to {new_file_path}: {e}')
+                    file_url = Path(new_file_path).resolve().as_uri()
+                    return f'src="{file_url}"'
+                # 如果文件名仅包含英文字母和数字，直接生成文件 URL
+                file_url = Path(abs_path).resolve().as_uri()
                 return f'src="{file_url}"'
             # 处理文档链接
             elif match.group(0).startswith('href="'):
-                if attr_value.endswith('.md'):
-                    anchor = os.path.splitext(attr_value)[0]
+                if decoded_attr_value.endswith('.md'):
+                    anchor = os.path.splitext(decoded_attr_value)[0]
                     return f'href="#{anchor}"'
-                elif '.md#' in attr_value:
-                    return f'href="#{attr_value.split("#")[1]}"'
+                elif '.md#' in decoded_attr_value:
+                    return f'href="#{decoded_attr_value.split("#")[1]}"'
         return match.group(0)
     
     html_content = re.sub(r'src="([^"]+)"', replace_src, html_content)
