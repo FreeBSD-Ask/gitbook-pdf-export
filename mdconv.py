@@ -191,14 +191,14 @@ def main(docdir: str) -> None:
         f.write(merged_content)
     print(f'Merged HTML saved to {final_html_path}')
     
-    # 生成 PDF 2.0
+    # 生成 PDF 1.7
     print('Generating PDF (this may take a while)...')
     font_config = FontConfiguration()
     HTML(final_html_path).write_pdf(
         os.path.join(BUILD_DIR, FINAL_PDF),
         font_config=font_config,
-        pdf_version="2.0",     # 指定PDF版本为2.0
-        pdf_variant="pdf/a-4u", # 测试 pdf/a-4u
+        pdf_version="1.7",     # 指定PDF版本为 1.7
+        pdf_variant="pdf/a-3u", # 测试 pdf/a-3u
         metadata=True,
     )
     print(f'PDF generated: {os.path.join(BUILD_DIR, FINAL_PDF)}')
