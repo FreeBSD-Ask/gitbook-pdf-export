@@ -22,12 +22,16 @@ pre, code, .highlight, .highlight pre {
     .highlight .powershell { 
   font-family: "WenQuanYi Micro Hei", "Cascadia Mono", monospace !important;
 }
+/* 为符合 PDF 3A u 标准 */
+img, svg, canvas {
+  image-rendering: crisp-edges;
+}
     td.linenos .normal { 
   color: inherit; 
   background-color: transparent;
   padding-left: 5px;
   padding-right: 5px;
-  font-family: inherit; /* 新增：继承代码块字体 */
+  font-family: inherit; /* 继承代码块字体 */
 }
 span.linenos { 
   color: inherit;
