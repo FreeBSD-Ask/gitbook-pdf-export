@@ -1,3 +1,5 @@
 weasyprint
 mistune
 pygments
+EbookLib
+beautifulsoup4
