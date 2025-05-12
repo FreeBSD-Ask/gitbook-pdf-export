@@ -4,7 +4,7 @@
 
 gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 
-**本项目基于 Python3、mistune 及 weasyprint**
+**本项目基于 Python3、mistune、EbookLib 及 weasyprint**
 
 ## 文件说明
 
