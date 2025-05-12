@@ -18,7 +18,7 @@ gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 
 ## FreeBSD 14.2 RELEASE 使用说明
 
-在 lang/python311、py311-pip、py311-mistune py311-pygments 下测试通过。
+在 lang/python311、py311-pip、py311-mistune、py311-pygments 下测试通过。
 
 ### 目录结构：
 
@@ -46,9 +46,6 @@ $ python mdconv.py Handbook
 ## Windows 11 24H2 使用说明
 
 >**如果所需文中所需文件在网络上找不到，请点击页面的“releases”，进行下载。**
-
-
-在 Python 3.12.3、pip 24.1.1、mistune 3.0.2、weasyprint 61.2、gtk3-runtime 3.24.3、pygments 2.17.2 下测试通过。
 
 
 ### 目录结构
