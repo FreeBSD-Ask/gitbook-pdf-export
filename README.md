@@ -18,7 +18,7 @@ gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 
 ## FreeBSD 14.2 RELEASE 使用说明
 
-在 lang/python311、py311-pip、py311-weasyprint、py311-mistune py311-pygments 下测试通过。
+在 lang/python311、py311-pip、py311-mistune py311-pygments 下测试通过。
 
 ### 目录结构：
 
@@ -34,8 +34,8 @@ gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 ### 安装及使用方法
 
 ```sh
-# pkg install python3.11 py311-pip py311-weasyprint py311-mistune py311-pygments py311-beautifulsoup
-$ pip install EbookLib
+# pkg install python3.11 py311-pip py311-mistune py311-pygments py311-beautifulsoup
+$ pip install EbookLib weasyprint
 $ cd /gitbook-pdf-export-main ①
 $ python mdconv.py Handbook
 ```
