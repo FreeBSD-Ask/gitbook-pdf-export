@@ -16,16 +16,16 @@ gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 
 其他未说明文件均可删除。
 
-## FreeBSD 14.1 RELEASE 使用说明
+## FreeBSD 14.2 RELEASE 使用说明
 
 在 lang/python311、py311-pip、py311-weasyprint、py311-mistune py311-pygments 下测试通过。
 
 ### 目录结构：
 
-我在 `/` 目录下创建了 `abc` 目录，并将 gitbook 项目目录整体放入了目录 `h` 中。
+我在 `/` 目录下创建了 `gitbook-pdf-export-main` 目录，并将 gitbook 项目目录整体放入了目录 `h` 中。
 
 ```sh
-/abc/ ①
+/gitbook-pdf-export-main/ ①
 ├── Handbook/ 
 ├── mdconv.py
 └── start.html
@@ -34,9 +34,9 @@ gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 ### 安装及使用方法
 
 ```sh
-# pkg install python311 py311-pip py311-weasyprint py311-mistune py311-pygments py311-beautifulsoup
+# pkg install python3.11 py311-pip py311-weasyprint py311-mistune py311-pygments py311-beautifulsoup
 $ pip install EbookLib
-$ cd /abc ①
+$ cd /gitbook-pdf-export-main ①
 $ python mdconv.py Handbook
 ```
 
@@ -54,7 +54,7 @@ $ python mdconv.py Handbook
 ### 目录结构
 
 ```batch
-C:\Users\ykla\Desktop\h\
+C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 ├── Handbook/ 
 ├── mdconv.py
 └── start.html
@@ -74,8 +74,8 @@ C:\Users\ykla\Desktop\h\
 ### 使用方法
 
 ```batch
-C:\Windows\system32>cd C:\Users\ykla\Desktop\h ①
-C:\Users\ykla\Desktop\h>python mdconv.py Handbook
+C:\Windows\system32>cd C:\Users\ykla\Desktop\gitbook-pdf-export-main ①
+C:\Users\ykla\Desktop\gitbook-pdf-export-main>python mdconv.py Handbook
 ```
 
 ① 我将其放在了用户 “ykla” 桌面的“h”文件夹中，并将 gitbook 项目放入了文件夹 `h` 中。
