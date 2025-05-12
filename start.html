@@ -1,289 +1,226 @@
 <!DOCTYPE html>
-<html><!-- HTML根元素 -->
-<head><!-- 头部：包含元数据和样式 -->
-  <meta charset="utf-8"><!-- 设置UTF-8字符编码 -->
-  <link rel="stylesheet" href="../highlight.css"><!-- 代码高亮样式表 -->
-  <style>
-    /* 自定义字体声明 */
-    @font-face {
-        /* 通用中文字体栈 */
-        font-family: WenQuanYi Micro Hei;
-        src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
-        font-display: swap;
-    }
-    /* 新增代码块基础字体配置 */
-pre, code, .highlight, .highlight pre {
-  font-family: "WenQuanYi Micro Hei", 
-               "Noto Sans Mono CJK SC",
-               "Source Han Mono", 
-               monospace !important; /* 强制覆盖字体 */
-  line-height: 125%;
-}
-    .highlight .powershell { 
-  font-family: "WenQuanYi Micro Hei", "Cascadia Mono", monospace !important;
-}
-/* 为符合 PDF 3A u 标准 */
-img, svg, canvas {
-  image-rendering: crisp-edges;
-}
-    td.linenos .normal { 
-  color: inherit; 
-  background-color: transparent;
-  padding-left: 5px;
-  padding-right: 5px;
-  font-family: inherit; /* 继承代码块字体 */
-}
-span.linenos { 
-  color: inherit;
-  background-color: transparent;
-  padding-left: 5px;
-  padding-right: 5px;
-  font-family: inherit; /* 新增：继承代码块字体 */
-}
-
-    /* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */ 
-.highlight .c,
-.highlight .ch,
-.highlight .cm,
-.highlight .cpf,
-.highlight .c1,
-.highlight .cs {
-  font-style: normal !important; /* 强制取消斜体 */
-  font-family: inherit !important; /* 确保继承中文字体 */
-}
-    /* 基础页面样式 */
-    body {
-        font-family: "WenQuanYi Micro Hei","Segoe UI","San Francisco","Roboto",SinoFont,"PingFang SC",sans-serif !important;
-        /* 强制继承 */
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        /* 正文字号 5 号字 */
-        font-size: 14px;
-    }
-
-    strong, b {
-        font-family: "Noto Sans CJK SC", sans-serif; /* 加粗单独使用 noto 字体 */
-        font-weight: bold;
-        /* font-size: 1.2em;      放大字号（可以调为 1.2em 或更大） */
-    }
-
-    /* 仿 GitHub 的引用样式 */
-    blockquote {
-        margin: 0.8em 0;
-        padding-left: 1em;
-        border-left: 0.25em solid #d0d7de;
-        color: #656d76;
-    }
-
-    /* 处理嵌套引用样式 */
-    blockquote blockquote {
-        margin: 0.5em 0;
-        padding-left: 1em;
-        border-left: 0.25em solid #d0d7de;
-    }
-
-    /* 段落全局样式 */
-    p {
-        line-height: 1.5;
-        /* 1.5倍行高 */
-        margin-bottom: 1em;
-        /* 段后间距1em */
-        text-indent: 2em;
-        /* 首行缩进2字符 */
-        orphans: 3;
-        /* 段尾最少保留3行 */
-        widows: 3;
-        /* 段首最少保留3行 */
-    }
-
-    /* 链接样式 */
-    a, a:hover, a:active, a:visited {
-        color: #007FFF;
-        /* 统一链接颜色 */
-        text-decoration: none;
-        /* 去除所有下划线 */
-    }
-
-    /* 打印样式优化 */
-    @media print {
-        /* 标题分页控制 */
-        h1, h2 {
-            page-break-before: always;
-        }
-        h1 {
-            page-break-after: avoid;
-        }
-
-        /* 图片容器设置 */
-        .figure-container {
-            page-break-inside: avoid;
-            break-inside: avoid;
-            max-height: 5cm !important;
-            margin: 0.5cm 0;
-            display: block;
-        }
-
-        /* 选中状态 */
-        input[type="checkbox"]:checked {
-            border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
-        }
-
-        /* 选中状态伪元素 */
-        input[type="checkbox"]:checked::before {
-            content: "✅" !important;
-            /* 改用✅ */
-            color: black !important;
-            font-size: 1.2em;
-            display: inline-block;
-            line-height: 1;
-        }
-
-        /* 隐藏原始选中样式 */
-        input[type="checkbox"]:checked {
-            -webkit-print-color-adjust: exact;
-            color-adjust: exact;
-        }
-
-        /* 移除 checkbox 默认样式 */
-        input[type="checkbox"] {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            width: 1.2em;
-            height: 1.2em;
-            position: relative;
-            cursor: pointer;
-            border: none;
-            background: none;
-            outline: none;
-            display: inline-flex;
-            align-items: center;
-            vertical-align: middle;
-        }
-
-        /* 取消焦点样式，防止黑框 */
-        input[type="checkbox"]:focus {
-            outline: none;
-            box-shadow: none;
-        }
-
-        /* 伪元素模拟 checkbox */
-        input[type="checkbox"]::before {
-            content: "⬜";
-            font-size: 1.2em;
-            display: inline-block;
-            line-height: 1;
-        }
-
-        /* 处理 Firefox 默认焦点边框 */
-        input[type="checkbox"]::-moz-focus-inner {
-            border: none;
-        }
-
-        /* 让 checkbox 和文字在同一行 */
-        label {
-            display: inline-flex;
-            align-items: center;
-            gap: 1em;
-            /* 控制间距 */
-        }
-
-        /* 打印基础设置 */
-        body {
-            margin: 0.3cm !important;
-            line-height: 1.3;
-        }
-
-        /* 图片约束 */
-        .figure-container img {
-            max-height: 5cm !important;
-            max-width: 75% !important;
-            margin: 0 auto;
-            object-fit: contain;
-        }
-    }
-
-    /* 三线表核心样式 */
-    table {
-        border-top: 2px solid #000;     /* 顶线 (第1线) */
-        border-bottom: 2px solid #000;  /* 底线 (第3线) */
-        border-collapse: collapse;     /* 合并边框 */
-        margin: 0 auto;
-        width: 100%;
-    }
-
-    /* 表头下方添加分隔线 */
-    table tr:first-child th {
-        border-bottom: 1px solid #000 !important;  /* 中间线 (第2线) */
-    }
-
-    /* 单元格通用样式 */
-    table tr td, table tr th {
-        border: none !important;       /* 移除所有默认边框 */
-        padding: 8px;                  /* 单元格内边距 */
-        text-align: left;
-    }
-
-    /* 表头文字居中 */
-    table tr th {
-        text-align: center;
-        /* 表头字号小 4 号字 */
-        font-size: 16px;
-    }
-
-    /* 移除斑马纹效果 */
-    tr:nth-child(even),
-    tr:nth-child(odd) {
-        background-color: transparent !important;
-    }
-
-    /* 响应式图片 */
-    img {
-        max-width: 50%;
-        display: block;
-        margin: 0 auto;
-    }
-
-    /* 代码块样式 */
-    pre {
-        white-space: pre-wrap;
-        overflow-wrap: break-word;
-        font-size: 14px;
-        padding: 10px;
-        background-color: rgba(0,100,50,0.05);
-        border-radius: 6px;
-    }
-
-    code {
-        border-radius: 5px;
-        background-color: rgba(100,100,50,0.05);
-        padding: 0 5px;
-    }
-
-    pre code {
-        border: none;
-        background-color: transparent;
-    }
-
-    /* 图片容器通用设置 */
-    .figure-container {
-        page-break-inside: avoid;
-        break-inside: avoid;
-        margin: 1rem 0;
-    }
-  </style>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
   <title>FreeBSD 中文社区文档</title>
   <meta name="author" content="FreeBSD 中文社区">
   <meta name="description" content="FreeBSD">
   <meta name="keywords" content="FreeBSD, UNIX">
   <meta name="generator" content="WeasyPrint">
-  <!-- PDF/A 相关标识 -->
   <meta name="pdfaid:part" content="3">
   <meta name="pdfaid:conformance" content="U">
   <meta name="dcterms.created" content="2025-04-12T15:08:29+09:00">
   <meta name="dcterms.modified" content="2025-04-12T15:08:29+09:00">
+  <link rel="stylesheet" href="../highlight.css">
+
+  <style>
+    /* 字体与基础结构 */
+    @font-face {
+      font-family: "WenQuanYi Micro Hei";
+      src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
+      font-display: swap;
+    }
+
+    body {
+      font-family: "WenQuanYi Micro Hei", "Segoe UI", "San Francisco", "Roboto", "PingFang SC", sans-serif !important;
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 1.5em;
+      color: #222;
+      background-color: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* 黑暗模式支持 */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #1e1e1e;
+        color: #ddd;
+      }
+      a {
+        color: #66bfff;
+      }
+      pre {
+        background-color: #2e2e2e;
+      }
+      code {
+        background-color: #3b3b3b;
+      }
+    }
+
+    p {
+      margin: 1em 0;
+      text-indent: 2em;
+    }
+
+    strong, b {
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-weight: bold;
+    }
+
+    a, a:hover, a:visited {
+      color: #007FFF;
+      text-decoration: none;
+    }
+
+    blockquote {
+      border-left: 4px solid #ccc;
+      margin: 1em 0;
+      padding-left: 1em;
+      color: #555;
+    }
+
+    blockquote blockquote {
+      border-left: 4px solid #bbb;
+    }
+
+    /* 表格美化：三线表风格 */
+    table {
+      border-collapse: collapse;
+      margin: 1.5em auto;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    table th {
+      border-bottom: 2px solid #000;
+      font-size: 16px;
+      text-align: center;
+      padding: 8px;
+    }
+
+    table td {
+      padding: 8px;
+      text-align: left;
+    }
+
+    table tr:first-child th {
+      border-bottom: 1px solid #000;
+    }
+
+    tr:nth-child(even), tr:nth-child(odd) {
+      background-color: transparent;
+    }
+
+    /* 代码块和内联代码 */
+    pre, code, .highlight, .highlight pre {
+      font-family: "WenQuanYi Micro Hei", "Noto Sans Mono CJK SC", "Source Han Mono", monospace !important;
+    }
+
+    pre {
+      background-color: rgba(0, 100, 50, 0.05);
+      border-radius: 6px;
+      padding: 1em;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+    }
+
+    code {
+      background-color: rgba(100, 100, 50, 0.05);
+      border-radius: 4px;
+      padding: 0 4px;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+    }
+
+    .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
+      font-style: normal !important;
+      font-family: inherit !important;
+    }
+
+    .highlight .powershell {
+      font-family: "WenQuanYi Micro Hei", "Cascadia Mono", monospace !important;
+    }
+
+    td.linenos .normal, span.linenos {
+      color: inherit;
+      background-color: transparent;
+      padding: 0 5px;
+      font-family: inherit;
+    }
+
+    /* 图片通用 */
+    img, svg, canvas {
+      image-rendering: crisp-edges;
+      max-width: 60%;
+      display: block;
+      margin: 1.5em auto;
+    }
+
+    .figure-container {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin: 1rem 0;
+    }
+
+    /* 打印优化 */
+    @media print {
+      h1, h2 {
+        page-break-before: always;
+      }
+
+      h1 {
+        page-break-after: avoid;
+      }
+
+      .figure-container {
+        page-break-inside: avoid;
+        max-height: 5cm;
+        margin: 0.5cm 0;
+        display: block;
+      }
+
+      .figure-container img {
+        max-height: 5cm !important;
+        max-width: 75% !important;
+        object-fit: contain;
+        margin: 0 auto;
+      }
+
+      input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 1.2em;
+        height: 1.2em;
+        border: none;
+        background: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        vertical-align: middle;
+      }
+
+      input[type="checkbox"]::before {
+        content: "⬜";
+        font-size: 1.2em;
+        display: inline-block;
+        line-height: 1;
+      }
+
+      input[type="checkbox"]:checked::before {
+        content: "✅" !important;
+        color: black !important;
+        font-size: 1.2em;
+      }
+
+      label {
+        display: inline-flex;
+        align-items: center;
+        gap: 1em;
+      }
+
+      body {
+        margin: 0.3cm !important;
+        line-height: 1.3;
+      }
+    }
+  </style>
 </head>
 <body>
 </body>
