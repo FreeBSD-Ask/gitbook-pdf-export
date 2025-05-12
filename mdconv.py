@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import shutil
 import re
@@ -5,12 +8,17 @@ import argparse
 import hashlib
 from urllib.parse import urlparse, unquote
 from pathlib import Path
+
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
+
 import mistune
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import html as pygments_html_formatter
+
+from ebooklib import epub
+from bs4 import BeautifulSoup
 
 # 常量定义
 BUILD_DIR = 'build'
@@ -18,6 +26,7 @@ SUMMARY_FILE = 'SUMMARY.md'
 START_HTML = 'start.html'
 FINAL_HTML = 'final.html'
 FINAL_PDF = 'final.pdf'
+FINAL_EPUB = 'final.epub'
 IMAGES_DIR = os.path.join(BUILD_DIR, 'images')
 
 def prepare_build_dir(build_dir: str) -> None:
@@ -25,70 +34,55 @@ def prepare_build_dir(build_dir: str) -> None:
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
     os.makedirs(build_dir)
-    # 创建 images 目录用于存放转换文件名后的图片
     os.makedirs(IMAGES_DIR, exist_ok=True)
 
 def read_markdown_file(filename: str) -> str:
-    """读取Markdown文件内容"""
-    with open(filename, 'r', encoding='utf-8') as file:
-        return file.read()
+    """读取 Markdown 文件内容"""
+    with open(filename, 'r', encoding='utf-8') as f:
+        return f.read()
 
 def convert_local_paths(html_content: str, docdir: str) -> str:
-    """处理本地图片路径和链接路径
-       当图片文件名（不含扩展名）包含非英文和非数字字符时，
-       转换为哈希值，并复制到构建目录下的 images 文件夹中。
-       对传入的路径先进行 URL 解码，从而避免因编码问题找不到文件
-    """
+    """处理本地图片路径和链接路径"""
     def replace_src(match):
-        attr_value = match.group(1)
-        # 先对路径进行 URL 解码
-        decoded_attr_value = unquote(attr_value)
-        parsed_url = urlparse(decoded_attr_value)
-        # 仅处理本地路径（无 scheme）
-        if not parsed_url.scheme:
-            # 处理图片路径
+        val = match.group(1)
+        decoded = unquote(val)
+        parsed = urlparse(decoded)
+        if not parsed.scheme:
             if match.group(0).startswith('src="'):
-                abs_path = os.path.abspath(os.path.join(docdir, decoded_attr_value))
-                base_name = os.path.basename(abs_path)
-                name, ext = os.path.splitext(base_name)
-                # 判断文件名（不含扩展名）是否仅包含英文字母和数字
+                abs_path = os.path.abspath(os.path.join(docdir, decoded))
+                name, ext = os.path.splitext(os.path.basename(abs_path))
+                # 生成规范化文件名
                 if not re.match(r'^[A-Za-z0-9]+$', name):
-                    # 转换为 MD5 哈希值作为新的文件名
-                    hash_val = hashlib.md5(name.encode('utf-8')).hexdigest()
-                    new_file_name = hash_val + ext
-                    new_file_path = os.path.join(IMAGES_DIR, new_file_name)
-                    try:
-                        shutil.copy(abs_path, new_file_path)
-                    except Exception as e:
-                        print(f'Error copying {abs_path} to {new_file_path}: {e}')
-                    file_url = Path(new_file_path).resolve().as_uri()
-                    return f'src="{file_url}"'
-                # 如果文件名仅包含英文字母和数字，直接生成文件 URL
-                file_url = Path(abs_path).resolve().as_uri()
-                return f'src="{file_url}"'
-            # 处理文档链接
+                    md5 = hashlib.md5(name.encode('utf-8')).hexdigest()
+                    new_name = md5 + ext
+                else:
+                    new_name = f"{name}{ext}"
+                dst = os.path.join(IMAGES_DIR, new_name)
+                try:
+                    shutil.copy(abs_path, dst)
+                except Exception as e:
+                    print(f'Error copying {abs_path}: {e}')
+                # 返回相对路径
+                return f'src="images/{new_name}"'
             elif match.group(0).startswith('href="'):
-                if decoded_attr_value.endswith('.md'):
-                    anchor = os.path.splitext(decoded_attr_value)[0]
+                if decoded.endswith('.md'):
+                    anchor = os.path.splitext(decoded)[0]
                     return f'href="#{anchor}"'
-                elif '.md#' in decoded_attr_value:
-                    return f'href="#{decoded_attr_value.split("#")[1]}"'
+                if '.md#' in decoded:
+                    return f'href="#{decoded.split("#")[1]}"'
         return match.group(0)
-    
+
     html_content = re.sub(r'src="([^"]+)"', replace_src, html_content)
     html_content = re.sub(r'href="([^"]+)"', replace_src, html_content)
     return html_content
 
 class CustomRenderer(mistune.HTMLRenderer):
-    """自定义Markdown渲染器"""
-    
-    def heading(self, text: str, level: int, raw: str = None) -> str:
-        """为标题添加锚点"""
-        anchor_id = re.sub(r'[^\w]+', '-', text.lower()).strip('-')
-        return f'<h{level + 1} id="{anchor_id}">{text}</h{level + 1}>'
-    
-    def block_code(self, code: str, info: str = None) -> str:
-        """代码块高亮处理"""
+    """自定义 Markdown 渲染器"""
+    def heading(self, text, level, raw=None):
+        anchor = re.sub(r'[^\w]+', '-', text.lower()).strip('-')
+        return f'<h{level+1} id="{anchor}">{text}</h{level+1}>'
+
+    def block_code(self, code, info=None):
         if info:
             try:
                 lexer = get_lexer_by_name(info.strip(), stripall=True)
@@ -96,115 +90,158 @@ class CustomRenderer(mistune.HTMLRenderer):
                 lexer = get_lexer_by_name('text', stripall=True)
         else:
             lexer = get_lexer_by_name('text', stripall=True)
-        formatter = pygments_html_formatter.HtmlFormatter()
-        return highlight(code, lexer, formatter)
-    
-    def strikethrough(self, text: str) -> str:
-        """删除线语法支持"""
+        fmt = pygments_html_formatter.HtmlFormatter()
+        return highlight(code, lexer, fmt)
+
+    def strikethrough(self, text):
         return f'<del>{text}</del>'
-    
-    def list_item(self, text: str) -> str:
-        """处理任务列表项（[x] 或 [ ]）"""
-        checkbox_pattern = re.compile(r'^\s*\[([ xX?]?)\]\s+')
-        match = checkbox_pattern.match(text)
-        if match:
-            checked = 'checked' if match.group(1).strip().lower() == 'x' else ''
-            text = text[match.end():].lstrip()
-            return f'<li><input type="checkbox" disabled {checked}> {text}</li>'
+
+    def list_item(self, text):
+        m = re.match(r'^\s*\[([ xX])\]\s+', text)
+        if m:
+            chk = 'checked' if m.group(1).lower()=='x' else ''
+            content = text[m.end():]
+            return f'<li><input type="checkbox" disabled {chk}> {content}</li>'
         return super().list_item(text)
 
-def markdown_to_html(markdown_text: str, docdir: str) -> str:
-    """将Markdown转换为HTML"""
+def markdown_to_html(md_text: str, docdir: str) -> str:
+    """将 Markdown 转换为 HTML"""
     renderer = CustomRenderer(escape=False)
-    markdown = mistune.create_markdown(
-        renderer=renderer,
-        plugins=['table', 'strikethrough']
-    )
-    html_output = markdown(markdown_text)
-    return convert_local_paths(html_output, docdir)
+    md = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough'])
+    html = md(md_text)
+    return convert_local_paths(html, docdir)
 
-def combine_markdown_to_html(docdir: str, input_files: list, output_file: str) -> None:
-    """合并多个Markdown文件为单个HTML"""
-    combined_html = ''
-    
-    for file in input_files:
-        if file.startswith('rawchaptertext:'):
-            chaptername = file.replace('rawchaptertext:', '')
-            anchor_id = re.sub(r'[^\w]+', '-', chaptername.lower()).strip('-')
-            combined_html += f'<a id="{anchor_id}"></a>\n<h1>{chaptername}</h1>\n'
+def combine_markdown_to_html(docdir: str, files: list, out_html: str):
+    """合并多个 Markdown 为单个 HTML"""
+    combined = ''
+    for f in files:
+        if f.startswith('rawchaptertext:'):
+            title = f.split(':',1)[1]
+            aid = re.sub(r'[^\w]+','-', title.lower()).strip('-')
+            combined += f'<a id="{aid}"></a>\n<h1>{title}</h1>\n'
             continue
-            
-        file_path = os.path.join(docdir, file)
-        if not os.path.exists(file_path):
-            print(f'Warning: File {file_path} does not exist, skipping')
+        path = os.path.join(docdir, f)
+        if not os.path.exists(path):
+            print(f'Warning: {path} 不存在，已跳过')
             continue
+        anchor = os.path.splitext(f)[0]
+        combined += f'<a id="{anchor}"></a>\n'
+        md = read_markdown_file(path)
+        combined += markdown_to_html(md, os.path.dirname(path)) + '\n'
+    with open(out_html, 'w', encoding='utf-8') as wf:
+        wf.write(combined)
+    print(f'Combined HTML saved to {out_html}')
 
-        # 添加基于文件名的锚点
-        anchor_id = os.path.splitext(file)[0]
-        combined_html += f'<a id="{anchor_id}"></a>\n'
+def generate_epub_with_ebooklib(html_file: str, output_epub: str):
+    """使用 EbookLib 从 HTML 生成 EPUB"""
+    # 读取合并后 HTML
+    with open(html_file, 'r', encoding='utf-8') as f:
+        soup = BeautifulSoup(f, 'html.parser')
+
+    book = epub.EpubBook()
+    book.set_identifier('id123456')
+    book.set_title('My Book')
+    book.set_language('zh')
+
+    # 添加图片资源
+    build_dir = os.path.dirname(html_file)
+    images_dir = os.path.join(build_dir, 'images')
+    if os.path.exists(images_dir):
+        for img_name in os.listdir(images_dir):
+            img_path = os.path.join(images_dir, img_name)
+            # 自动检测 MIME 类型
+            if img_name.lower().endswith('.png'):
+                media_type = 'image/png'
+            elif img_name.lower().endswith('.jpg') or img_name.lower().endswith('.jpeg'):
+                media_type = 'image/jpeg'
+            elif img_name.lower().endswith('.gif'):
+                media_type = 'image/gif'
+            else:
+                media_type = 'application/octet-stream'
             
-        file_dir = os.path.dirname(file_path)
-        markdown_text = read_markdown_file(file_path)
-        html_output = markdown_to_html(markdown_text, file_dir)
-        combined_html += html_output + '\n'
-    
-    with open(output_file, 'w', encoding='utf-8') as file:
-        file.write(combined_html)
-    print(f'Combined HTML saved to {output_file}')
+            with open(img_path, 'rb') as img_file:
+                img_content = img_file.read()
+            img_item = epub.EpubItem(
+                uid=img_name,
+                file_name=f'images/{img_name}',
+                media_type=media_type,
+                content=img_content
+            )
+            book.add_item(img_item)
 
-def main(docdir: str) -> None:
-    """主处理流程"""
+    # 按 H1/H2 拆分章节
+    chapters = []
+    for idx, header in enumerate(soup.find_all(['h1','h2'])):
+        chap = epub.EpubHtml(
+            title=header.get_text(),
+            file_name=f'chap_{idx+1}.xhtml',
+            lang='zh'
+        )
+        # 收集当前标题到下一个同级标题之间的内容
+        content = [header]
+        for sib in header.next_siblings:
+            if sib.name in ['h1','h2']:
+                break
+            content.append(sib)
+        chap.content = ''.join(str(tag) for tag in content)
+        book.add_item(chap)
+        chapters.append(chap)
+
+    # 定义目录和 spine
+    book.toc = tuple(chapters)
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
+    book.spine = ['nav'] + chapters
+
+    epub.write_epub(output_epub, book, {})
+    print(f'EPUB generated via EbookLib: {output_epub}')
+
+def main(docdir: str):
     prepare_build_dir(BUILD_DIR)
-    
+
     # 处理 SUMMARY.md
-    summary_path = os.path.join(docdir, SUMMARY_FILE)
-    with open(summary_path, 'r', encoding='utf-8') as file:
-        content = file.read()
-    
-    # 将二级标题转换为伪章节
-    summary_content = re.sub(
-        r'## (.+?)$',
-        r'[\1](rawchaptertext:\1)',
-        content,
-        flags=re.MULTILINE
-    )
-    
-    # 生成中间 summary.md
-    summary_build_path = os.path.join(BUILD_DIR, 'summary.md')
-    with open(summary_build_path, 'w', encoding='utf-8') as file:
-        file.write(summary_content)
-    
-    # 提取文件路径列表
-    file_paths = re.findall(r'\[.*?\]\((.*?)\)', summary_content)
-    
-    # 生成中间 HTML
-    output_file = os.path.join(BUILD_DIR, 'combined.html')
-    combine_markdown_to_html(docdir, file_paths, output_file)
-    
-    # 合并 start.html 和 combined.html
+    summ = os.path.join(docdir, SUMMARY_FILE)
+    with open(summ, 'r', encoding='utf-8') as f:
+        content = f.read()
+    summary_md = re.sub(r'## (.+?)$', r'[\1](rawchaptertext:\1)', content, flags=re.MULTILINE)
+    summary_build = os.path.join(BUILD_DIR, 'summary.md')
+    with open(summary_build, 'w', encoding='utf-8') as f:
+        f.write(summary_md)
+
+    # 提取文件列表
+    files = re.findall(r'\[.*?\]\((.*?)\)', summary_md)
+
+    # 生成合并 HTML
+    combined_html = os.path.join(BUILD_DIR, 'combined.html')
+    combine_markdown_to_html(docdir, files, combined_html)
+
+    # 合并 start.html + combined.html
     with open(START_HTML, 'r', encoding='utf-8') as f1, \
-         open(output_file, 'r', encoding='utf-8') as f2:
-        merged_content = f1.read() + '\n' + f2.read()
-    
-    final_html_path = os.path.join(BUILD_DIR, FINAL_HTML)
-    with open(final_html_path, 'w', encoding='utf-8') as f:
-        f.write(merged_content)
-    print(f'Merged HTML saved to {final_html_path}')
-    
-    # 生成 PDF 1.7
+         open(combined_html, 'r', encoding='utf-8') as f2:
+        merged = f1.read() + '\n' + f2.read()
+    final_html = os.path.join(BUILD_DIR, FINAL_HTML)
+    with open(final_html, 'w', encoding='utf-8') as f:
+        f.write(merged)
+    print(f'Merged HTML saved to {final_html}')
+
+    # 生成 PDF
     print('Generating PDF (this may take a while)...')
-    font_config = FontConfiguration()
-    HTML(final_html_path).write_pdf(
+    font_conf = FontConfiguration()
+    HTML(final_html).write_pdf(
         os.path.join(BUILD_DIR, FINAL_PDF),
-        font_config=font_config,
-        pdf_version="1.7",     # 指定PDF版本为 1.7
-        pdf_variant="pdf/a-3u", # 测试 pdf/a-3u
+        font_config=font_conf,
+        pdf_version="1.7",
+        pdf_variant="pdf/a-3u",
         metadata=True,
     )
     print(f'PDF generated: {os.path.join(BUILD_DIR, FINAL_PDF)}')
 
+    # 生成 EPUB（方案 2）
+    epub_path = os.path.join(BUILD_DIR, FINAL_EPUB)
+    generate_epub_with_ebooklib(final_html, epub_path)
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate PDF from Markdown documents')
-    parser.add_argument('docdir', type=str, help='Document root directory')
+    parser = argparse.ArgumentParser(description='从 Markdown 生成 PDF 和 EPUB')
+    parser.add_argument('docdir', type=str, help='文档根目录')
     args = parser.parse_args()
     main(args.docdir)
