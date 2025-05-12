@@ -34,9 +34,10 @@ gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 ### 安装及使用方法
 
 ```sh
-# pkg install python311 py311-pip py311-weasyprint py311-mistune py311-pygments
-# cd /abc ①
-# python mdconv.py Handbook
+# pkg install python311 py311-pip py311-weasyprint py311-mistune py311-pygments py311-beautifulsoup
+$ pip install EbookLib
+$ cd /abc ①
+$ python mdconv.py Handbook
 ```
 
 ① 请换成你的自己的路径
@@ -67,7 +68,7 @@ C:\Users\ykla\Desktop\h\
 - **安装 mistune 和 weasyprint**
 
 >```batch
->C:\Windows\system32>pip install mistune weasyprint  pygments
+>C:\Windows\system32>pip install mistune weasyprint pygments EbookLib beautifulsoup4
 >```
 
 ### 使用方法
