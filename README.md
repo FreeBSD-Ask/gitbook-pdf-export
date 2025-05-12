@@ -1,8 +1,8 @@
-# GitBook PDF 导出工具（GitBook PDF Export Tool）
+# GitBook PDF/EPUB 导出工具（GitBook PDF/EPUB Export Tool）
 
 作者为：[safreya](https://github.com/safreya)
 
-gitbook 通用 PDF 导出工具。支持代码高亮。
+gitbGitBookook 通用 PDF/EPUB 导出工具。支持代码高亮。
 
 **本项目基于 Python3、mistune 及 weasyprint**
 
