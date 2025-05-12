@@ -75,11 +75,11 @@ C:\Windows\system32>cd C:\Users\ykla\Desktop\gitbook-pdf-export-main ①
 C:\Users\ykla\Desktop\gitbook-pdf-export-main>python mdconv.py Handbook
 ```
 
-① 我将其放在了用户 “ykla” 桌面的“h”文件夹中，并将 gitbook 项目放入了文件夹 `h` 中。
+① 我将其放在了用户 “ykla” 桌面的“gitbook-pdf-export-main”文件夹中，并将 gitbook 项目放入了文件夹 `gitbook-pdf-export-main` 中。
 
 >**注意**
 >
->如果不知道用户名是什么，可以打开同时按快捷键 `ctrl` `alt` `del` 来打开任务管理器，点击“用户”，就能看到了，如果账户名是中文，后果将不可知，因为未经测试。
+>如果不知道用户名是什么，可以打开同时按快捷键 `ctrl` + `alt` + `del` 来打开任务管理器，点击“用户”，就能看到了，如果账户名是中文，后果将不可知，因为未经测试。
 
 
 ## Linux/GitHub Action
