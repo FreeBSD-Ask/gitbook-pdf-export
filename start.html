@@ -78,29 +78,37 @@
     }
 
 
-    /* 表格美化：三线表风格 */
-    table {
-      border-collapse: collapse;
-      margin: 1.5em auto;
-      width: 100%;
-      font-size: 14px;
-    }
+/* 表格美化：三线表风格 */
+table {
+  border-collapse: collapse;
+  margin: 1.5em auto;
+  width: 100%;
+  font-size: 14px;
+}
 
-    table th {
-      border-bottom: 2px solid #000;
-      font-size: 16px;
-      text-align: center;
-      padding: 8px;
-    }
+table th {
+  border-bottom: 2px solid #000;
+  font-size: 16px;
+  text-align: center;
+  padding: 8px;
+}
 
-    table td {
-      padding: 8px;
-      text-align: left;
-    }
+/* 顶部边框：第一行表头的顶部 */
+table tr:first-child th {
+  border-top: 2px solid #000;
+}
 
-    table tr:first-child th {
-      border-bottom: 1px solid #000;
-    }
+/* 正文单元格样式 */
+table td {
+  padding: 8px;
+  text-align: left;
+}
+
+/* 底部边框：最后一行的底部 */
+table tr:last-child td {
+  border-bottom: 2px solid #000;
+}
+
 	/* 移除斑马纹效果 */
     tr:nth-child(even), tr:nth-child(odd) {
       background-color: transparent;
