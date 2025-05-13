@@ -58,22 +58,25 @@
       font-family: "Noto Sans CJK SC", sans-serif;
       font-weight: bold;
     }
-
+	 /* 链接样式 */
     a, a:hover, a:visited {
-      color: #007FFF;
-      text-decoration: none;
+      color: #007FFF;  /* 统一链接颜色 */
+      text-decoration: none;  /* 去除所有链接的下划线 */
     }
-
+	
+	/* 引用样式 */
     blockquote {
-      border-left: 4px solid #ccc;
+      border-left: 2px solid rgb(206, 219, 226);
       margin: 1em 0;
       padding-left: 1em;
-      color: #555;
+      color: rgb(97, 113, 121); /* 设置文字颜色为深灰蓝 */
+    }
+	/* 嵌套引用样式 */
+    blockquote blockquote {
+      border-left: 2px solid rgb(206, 219, 226);
+      color: rgb(97, 113, 121); /* 设置嵌套引用的文字颜色 */
     }
 
-    blockquote blockquote {
-      border-left: 4px solid #bbb;
-    }
 
     /* 表格美化：三线表风格 */
     table {
@@ -98,7 +101,7 @@
     table tr:first-child th {
       border-bottom: 1px solid #000;
     }
-
+	/* 移除斑马纹效果 */
     tr:nth-child(even), tr:nth-child(odd) {
       background-color: transparent;
     }
@@ -107,9 +110,11 @@
     pre, code, .highlight, .highlight pre {
       font-family: "WenQuanYi Micro Hei", "Noto Sans Mono CJK SC", "Source Han Mono", monospace !important;
     }
-
-    pre {
-      background-color: rgba(0, 100, 50, 0.05);
+	
+	/* 代码块样式 */
+	pre {
+      background-color: #ffffff;
+      border: 2px solid rgb(221, 232, 237); /*边框线颜色、宽度*/
       border-radius: 6px;
       padding: 1em;
       white-space: pre-wrap;
@@ -117,20 +122,21 @@
       font-size: 14px;
     }
 
-    code {
-      background-color: rgba(100, 100, 50, 0.05);
-      border-radius: 4px;
-      padding: 0 4px;
+	/* 文本中的代码块样式 */
+	code {
+      background-color: rgb(244, 248, 250);   /* 浅蓝灰背景 */
+      border-radius: 5px;                     /* 圆角边框 */
+	  padding: 0 5px;
     }
 
     pre code {
       background: none;
       border: none;
     }
-
+	/* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */ 
     .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
-      font-style: normal !important;
-      font-family: inherit !important;
+      font-style: normal !important; /* 强制取消斜体 */
+      font-family: inherit !important; /* 确保继承中文字体 */
     }
 
     .highlight .powershell {
@@ -160,6 +166,7 @@
 
     /* 打印优化 */
     @media print {
+	/* 标题分页控制 */
       h1, h2 {
         page-break-before: always;
       }
