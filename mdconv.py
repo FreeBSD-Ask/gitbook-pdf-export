@@ -112,7 +112,8 @@ class CustomRenderer(mistune.HTMLRenderer):
 def markdown_to_html(md_text: str, docdir: str) -> str:
     """将 Markdown 转换为 HTML"""
     renderer = CustomRenderer(escape=False)
-    md = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough'])
+    # 启用脚注插件
+    md = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough', 'footnotes'])
     html = md(md_text)
     return convert_local_paths(html, docdir)
 
@@ -264,6 +265,7 @@ def main(docdir: str):
     # 生成 EPUB（包含 start.html 和 CSS）
     epub_path = os.path.join(BUILD_DIR, FINAL_EPUB)
     generate_epub_with_ebooklib(final_html, START_HTML, epub_path)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='从 Markdown 生成 PDF 和 EPUB')
