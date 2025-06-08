@@ -20,17 +20,27 @@
       src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
       font-display: swap;
     }
-
+	  
+    /* 页码显示 */
     @page {
       size: A4;
       margin: 2cm 2cm 2.5cm 2cm;
 
     @bottom-center {
-    content: "第 " counter(page) " 页";
-    font-family: "WenQuanYi Micro Hei", sans-serif;
-    font-size: 12px;
-    color: #000;
+      content: "第 " counter(page) " 页";
+      font-family: "WenQuanYi Micro Hei", sans-serif;
+      font-size: 14px;
+      color: black;
+    }
+}
+
+/* 首页不显示页码 */
+@page:first {
+  @bottom-center {
+    content: "";
   }
+
+  counter-reset: page 0;
 }
 
 
