@@ -21,6 +21,19 @@
       font-display: swap;
     }
 
+    @page {
+      size: A4;
+      margin: 2cm 2cm 2.5cm 2cm;
+
+    @bottom-center {
+    content: "第 " counter(page) " 页";
+    font-family: "WenQuanYi Micro Hei", sans-serif;
+    font-size: 12px;
+    color: #000;
+  }
+}
+
+
     body {
       font-family: "WenQuanYi Micro Hei", "Segoe UI", "San Francisco", "Roboto", "PingFang SC", sans-serif !important;
       font-size: 14px;
