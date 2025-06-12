@@ -175,7 +175,9 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
     if os.path.exists(images_dir):
         for img_name in os.listdir(images_dir):
             img_path = os.path.join(images_dir, img_name)
-            if img_name.lower().endswith(('.png',)):
+            if img_name.lower().endswith('.svg'):
+                media_type = 'image/svg+xml'
+            elif img_name.lower().endswith(('.png',)):
                 media_type = 'image/png'
             elif img_name.lower().endswith(('.jpg', '.jpeg')):
                 media_type = 'image/jpeg'
