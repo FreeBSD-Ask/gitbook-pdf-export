@@ -69,10 +69,10 @@ jobs:
           usesh: true
           prepare: |
             pkg update -f 
-            pkg install -y python3 devel/py-pip libxml2 libxslt || true
+            pkg install -y python3.11 py311-pip py311-mistune py311-pygments py311-beautifulsoup py311-pyinstaller || true
+            pip install EbookLib weasyprint || true
           run: |
             set -euo pipefail
-            python3 -m pip install -r requirements.txt pyinstaller
             pyinstaller --clean --onefile mdconv.py
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
 
@@ -82,32 +82,4 @@ jobs:
           name: mdconv-freebsd
           path: mdconv-freebsd.tar.gz
 
-  openbsd:
-    name: Build on OpenBSD
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
 
-      - name: Build inside OpenBSD VM
-        uses: vmactions/openbsd-vm@v1.2.0
-        with:
-          release: '7.7'
-          usesh: true
-          prepare: |
-            pkg_add python%3.13
-            pkg_add py3-pip libxml libxslt pkgconf || true
-          run: |
-            set -euo pipefail
-            python3 -m venv .venv
-            . .venv/bin/activate
-            python3 -m ensurepip
-            python3 -m pip install --upgrade pip
-            python3 -m pip install -r requirements.txt pyinstaller
-            pyinstaller --clean --onefile mdconv.py
-            tar czf mdconv-openbsd.tar.gz -C dist mdconv
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mdconv-openbsd
-          path: mdconv-openbsd.tar.gz
