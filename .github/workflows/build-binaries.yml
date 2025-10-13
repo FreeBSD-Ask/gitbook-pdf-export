@@ -1,0 +1,114 @@
+name: Build binaries
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  linux-windows:
+    name: Build on ${{ matrix.display_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            display_name: Ubuntu
+            artifact_name: mdconv-ubuntu
+            binary_name: mdconv
+          - os: windows-latest
+            display_name: Windows
+            artifact_name: mdconv-windows
+            binary_name: mdconv.exe
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --clean --onefile mdconv.py
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp dist/mdconv.exe "release/${{ matrix.artifact_name }}.exe"
+          else
+            cp dist/mdconv "release/${{ matrix.artifact_name }}"
+            chmod +x "release/${{ matrix.artifact_name }}"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: release/*
+
+  freebsd:
+    name: Build on FreeBSD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build inside FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: '14.2'
+          usesh: true
+          prepare: |
+            pkg update -f
+            pkg install -y python3 devel/py-pip
+          run: |
+            set -euo pipefail
+            cd /github/workspace
+            python3 -m pip install --upgrade pip
+            python3 -m pip install -r requirements.txt pyinstaller
+            pyinstaller --clean --onefile mdconv.py
+            tar czf mdconv-freebsd.tar.gz -C dist mdconv
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdconv-freebsd
+          path: mdconv-freebsd.tar.gz
+
+  openbsd:
+    name: Build on OpenBSD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build inside OpenBSD VM
+        uses: vmactions/openbsd-vm@v1
+        with:
+          release: '7.5'
+          usesh: true
+          prepare: |
+            pkg_add python%3.13
+            pkg_add py3-pip
+          run: |
+            set -euo pipefail
+            cd /github/workspace
+            python3 -m ensurepip
+            python3 -m pip install --upgrade pip
+            python3 -m pip install -r requirements.txt pyinstaller
+            pyinstaller --clean --onefile mdconv.py
+            tar czf mdconv-openbsd.tar.gz -C dist mdconv
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdconv-openbsd
+          path: mdconv-openbsd.tar.gz
