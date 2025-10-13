@@ -68,8 +68,8 @@ jobs:
           release: '14.3'
           usesh: true
           prepare: |
-            pkg update -f
-            pkg install -y python3 devel/py-pip
+            pkg update -f 
+            pkg install -y python3 devel/py-pip libxml2 libxslt || true
           run: |
             set -euo pipefail
             python3 -m pip install -r requirements.txt pyinstaller
@@ -95,9 +95,11 @@ jobs:
           usesh: true
           prepare: |
             pkg_add python%3.13
-            pkg_add py3-pip
+            pkg_add py3-pip libxml libxslt pkgconf || true
           run: |
             set -euo pipefail
+            python3 -m venv .venv
+            . .venv/bin/activate
             python3 -m ensurepip
             python3 -m pip install --upgrade pip
             python3 -m pip install -r requirements.txt pyinstaller
