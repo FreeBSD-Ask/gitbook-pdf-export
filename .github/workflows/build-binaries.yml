@@ -69,8 +69,8 @@ jobs:
           usesh: true
           run: |
             pkg update -f 
-            pkg install -y py311-freebsd py311-pip py311-mistune py311-pygments py311-beautifulsoup py311-pyinstaller
-            pip install EbookLib weasyprint
+            pkg install -y py311-freebsd py311-pip py311-mistune py311-pygments py311-beautifulsoup py311-pyinstaller py311-weasyprint py311-pillow
+            pip install EbookLib
             set -euo pipefail
             pyinstaller --clean --onefile mdconv.py
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
