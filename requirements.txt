@@ -3,3 +3,4 @@ mistune
 pygments
 EbookLib
 beautifulsoup4
+python-docx

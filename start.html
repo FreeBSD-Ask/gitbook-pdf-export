@@ -17,35 +17,33 @@
     /* 字体与基础结构 */
     @font-face {
       font-family: "WenQuanYi Micro Hei";
-      src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
+      src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"),
+           local("Noto Sans CJK SC"), local("Microsoft YaHei"), local("Source Han Sans SC");
       font-display: swap;
     }
-	  
+
     /* 页码显示 */
     @page {
       size: A4;
       margin: 2cm 2cm 2.5cm 2cm;
-
-    @bottom-center {
-      content: "第 " counter(page) " 页";
-      font-family: "WenQuanYi Micro Hei", sans-serif;
-      font-size: 14px;
-      color: black;
+      @bottom-center {
+        content: "第 " counter(page) " 页";
+        font-family: "WenQuanYi Micro Hei", sans-serif;
+        font-size: 12pt;
+        color: #111;
+      }
     }
-}
 
-/* 首页不显示页码 */
-@page:first {
-  @bottom-center {
-    content: "";
-  }
-
-  counter-reset: page 0;
-}
-
+    /* 首页不显示页码 */
+    @page:first {
+      @bottom-center {
+        content: "";
+      }
+      counter-reset: page 0;
+    }
 
     body {
-      font-family: "WenQuanYi Micro Hei", "Segoe UI", "San Francisco", "Roboto", "PingFang SC", sans-serif !important;
+      font-family: "WenQuanYi Micro Hei", "Microsoft YaHei", "Segoe UI", "San Francisco", "Roboto", "PingFang SC", sans-serif !important;
       font-size: 14px;
       line-height: 1.6;
       margin: 1.5em;
@@ -53,6 +51,10 @@
       background-color: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      font-synthesis: weight;
+      text-align: justify;
+      text-justify: inter-ideograph;
+      hyphens: auto;
     }
 
     /* 黑暗模式支持 */
@@ -77,114 +79,129 @@
       text-indent: 2em;
     }
 
-    strong, b {
-      font-family: "Noto Sans CJK SC", sans-serif;
-      font-weight: bold;
+    strong,
+    b {
+      font-family: inherit;
+      font-weight: 700;
+      font-synthesis: weight;
     }
-	 /* 链接样式 */
-    a, a:hover, a:visited {
-      color: #007FFF;  /* 统一链接颜色 */
-      text-decoration: none;  /* 去除所有链接的下划线 */
+
+    /* 链接样式 */
+    a,
+    a:hover,
+    a:visited {
+      color: #007FFF;
+      text-decoration: none;
     }
-	
-	/* 引用样式 */
+
+    /* 引用样式 */
     blockquote {
       border-left: 2px solid rgb(206, 219, 226);
       margin: 1em 0;
       padding-left: 1em;
-      color: rgb(97, 113, 121); /* 设置文字颜色为深灰蓝 */
+      color: rgb(97, 113, 121);
     }
-	/* 嵌套引用样式 */
+
+    /* 嵌套引用样式 */
     blockquote blockquote {
       border-left: 2px solid rgb(206, 219, 226);
-      color: rgb(97, 113, 121); /* 设置嵌套引用的文字颜色 */
+      color: rgb(97, 113, 121);
     }
 
+    /* 表格美化：三线表风格 */
+    table {
+      border-collapse: collapse;
+      margin: 1.5em auto;
+      width: 100%;
+      font-size: 14px;
+    }
 
-/* 表格美化：三线表风格 */
-table {
-  border-collapse: collapse;
-  margin: 1.5em auto;
-  width: 100%;
-  font-size: 14px;
-}
+    table th {
+      border-bottom: 2px solid #000;
+      font-size: 16px;
+      text-align: center;
+      padding: 8px;
+    }
 
-table th {
-  border-bottom: 2px solid #000;
-  font-size: 16px;
-  text-align: center;
-  padding: 8px;
-}
+    table tr:first-child th {
+      border-top: 2px solid #000;
+    }
 
-/* 顶部边框：第一行表头的顶部 */
-table tr:first-child th {
-  border-top: 2px solid #000;
-}
+    table td {
+      padding: 8px;
+      text-align: left;
+    }
 
-/* 正文单元格样式 */
-table td {
-  padding: 8px;
-  text-align: left;
-}
+    table tr:last-child td {
+      border-bottom: 2px solid #000;
+    }
 
-/* 底部边框：最后一行的底部 */
-table tr:last-child td {
-  border-bottom: 2px solid #000;
-}
-
-	/* 移除斑马纹效果 */
-    tr:nth-child(even), tr:nth-child(odd) {
+    tr:nth-child(even),
+    tr:nth-child(odd) {
       background-color: transparent;
     }
 
     /* 代码块和内联代码 */
-    pre, code, .highlight, .highlight pre {
-      font-family: "WenQuanYi Micro Hei", "Noto Sans Mono CJK SC", "Source Han Mono", monospace !important;
+    pre,
+    code,
+    .highlight,
+    .highlight pre {
+      font-family: "WenQuanYi Micro Hei", "Noto Sans Mono CJK SC", "Source Han Mono", "Microsoft YaHei", monospace !important;
     }
-	
-	/* 代码块样式 */
-	pre {
+
+    pre {
       background-color: #ffffff;
-      border: 2px solid rgb(221, 232, 237); /*边框线颜色、宽度*/
+      border: 2px solid rgb(221, 232, 237);
       border-radius: 6px;
       padding: 1em;
       white-space: pre-wrap;
       word-break: break-word;
+      overflow-wrap: anywhere;
       font-size: 14px;
     }
 
-	/* 文本中的代码块样式 */
-	code {
-      background-color: rgb(244, 248, 250);   /* 浅蓝灰背景 */
-      border-radius: 5px;                     /* 圆角边框 */
-	  padding: 0 5px;
+    code {
+      background-color: rgb(244, 248, 250);
+      border-radius: 5px;
+      padding: 0 5px;
+      overflow-wrap: anywhere;
     }
 
     pre code {
       background: none;
       border: none;
+      padding: 0;
     }
-	/* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */ 
-    .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
-      font-style: normal !important; /* 强制取消斜体 */
-      font-family: inherit !important; /* 确保继承中文字体 */
+
+    .highlight .c,
+    .highlight .ch,
+    .highlight .cm,
+    .highlight .cpf,
+    .highlight .c1,
+    .highlight .cs {
+      font-style: normal !important;
+      font-family: inherit !important;
     }
 
     .highlight .powershell {
       font-family: "WenQuanYi Micro Hei", "Cascadia Mono", monospace !important;
     }
 
-    td.linenos .normal, span.linenos {
+    td.linenos .normal,
+    span.linenos {
       color: inherit;
       background-color: transparent;
       padding: 0 5px;
       font-family: inherit;
     }
 
-    /* 图片通用 */
-    img, svg, canvas {
-      image-rendering: crisp-edges;
-      max-width: 60%;
+    img,
+    svg,
+    canvas {
+      image-rendering: optimizeQuality;
+      width: auto;
+      max-width: 80%;
+      height: auto;
       display: block;
       margin: 1.5em auto;
     }
@@ -195,10 +212,18 @@ table tr:last-child td {
       margin: 1rem 0;
     }
 
+    @media screen {
+      img,
+      svg,
+      canvas {
+        max-width: 100%;
+      }
+    }
+
     /* 打印优化 */
     @media print {
-	/* 标题分页控制 */
-      h1, h2 {
+      h1,
+      h2 {
         page-break-before: always;
       }
 
