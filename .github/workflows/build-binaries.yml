@@ -60,7 +60,7 @@ jobs:
     name: Build on FreeBSD
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build inside FreeBSD VM
         uses: vmactions/freebsd-vm@v1
@@ -88,7 +88,7 @@ jobs:
     name: Build on OpenBSD
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build inside OpenBSD VM
         uses: vmactions/openbsd-vm@v1
