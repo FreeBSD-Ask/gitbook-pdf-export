@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - master
   pull_request:
 
 jobs:
@@ -24,11 +23,11 @@ jobs:
             artifact_name: mdconv-windows
             binary_name: mdconv.exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Install build dependencies
         run: |
@@ -70,7 +69,7 @@ jobs:
           usesh: true
           prepare: |
             pkg update -f
-            pkg install -y python3 py311-pip
+            pkg install -y python3 devel/py-pip
           run: |
             set -euo pipefail
             cd /github/workspace
@@ -97,7 +96,7 @@ jobs:
           release: '7.5'
           usesh: true
           prepare: |
-            pkg_add python%3.11
+            pkg_add python%3.13
             pkg_add py3-pip
           run: |
             set -euo pipefail
