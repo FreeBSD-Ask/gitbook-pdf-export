@@ -72,7 +72,6 @@ jobs:
             pkg install -y python3 devel/py-pip
           run: |
             set -euo pipefail
-            cd /github/workspace
             python3 -m pip install -r requirements.txt pyinstaller
             pyinstaller --clean --onefile mdconv.py
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
@@ -99,7 +98,6 @@ jobs:
             pkg_add py3-pip
           run: |
             set -euo pipefail
-            cd /github/workspace
             python3 -m ensurepip
             python3 -m pip install --upgrade pip
             python3 -m pip install -r requirements.txt pyinstaller
