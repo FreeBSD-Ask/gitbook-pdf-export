@@ -7,7 +7,7 @@ import re
 import argparse
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Iterable
 from urllib.parse import urlparse, unquote
 from pathlib import Path
 
@@ -26,7 +26,7 @@ try:
     from docx import Document
     from docx.enum.style import WD_STYLE_TYPE
     from docx.oxml.ns import qn
-    from docx.shared import Pt
+    from docx.shared import Pt, Inches
 
     HAS_DOCX = True
 except ImportError:
@@ -34,6 +34,7 @@ except ImportError:
     WD_STYLE_TYPE = None
     qn = None
     Pt = None
+    Inches = None
     HAS_DOCX = False
 
 # 常量定义
@@ -136,6 +137,25 @@ def markdown_to_html(md_text: str, docdir: str) -> str:
     return convert_local_paths(html, docdir)
 
 
+def _deduplicate_entries(entries: Iterable[str]) -> List[str]:
+    """按顺序移除重复条目，避免重复章节造成目录问题"""
+
+    seen = set()
+    unique: List[str] = []
+    for entry in entries:
+        if entry.startswith('rawchaptertext:'):
+            key = entry.lower()
+        else:
+            base, _, fragment = entry.partition('#')
+            norm = os.path.normpath(base)
+            key = f"{norm.lower()}#{fragment.lower()}" if fragment else norm.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(entry)
+    return unique
+
+
 def combine_markdown_to_html(docdir: str, files: List[str]) -> str:
     """合并多个 Markdown 为单个 HTML 字符串，并支持多线程处理"""
 
@@ -157,6 +177,7 @@ def combine_markdown_to_html(docdir: str, files: List[str]) -> str:
         html_fragment = markdown_to_html(md, os.path.dirname(path)) + '\n'
         return index, f'<a id="{anchor}"></a>\n{html_fragment}'
 
+    files = _deduplicate_entries(files)
     combined_parts = [''] * len(files)
     with ThreadPoolExecutor(max_workers=max(4, (os.cpu_count() or 1))) as executor:
         futures = [executor.submit(process_entry, (idx, fname)) for idx, fname in enumerate(files)]
@@ -173,6 +194,15 @@ def merge_with_template(template_path: str, html_content: str, out_html: str) ->
     """将生成的 HTML 内容插入模板中，避免出现空白首页"""
     with open(template_path, 'r', encoding='utf-8') as tf:
         soup = BeautifulSoup(tf, 'html.parser')
+
+    head = soup.head
+    if head is not None and head.find('style', id='auto-first-heading') is None:
+        override = soup.new_tag('style', id='auto-first-heading')
+        override.string = (
+            'body > h1:first-of-type, body > h2:first-of-type '
+            '{page-break-before:auto !important;break-before:auto !important;}'
+        )
+        head.append(override)
 
     body = soup.body
     if body is None:
@@ -205,9 +235,15 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
     css_items = []
     with open(start_html, 'r', encoding='utf-8') as f:
         start_soup = BeautifulSoup(f, 'html.parser')
+    inline_styles = [style.get_text() for style in start_soup.find_all('style') if style.get_text(strip=True)]
+
+    start_dir = os.path.dirname(os.path.abspath(start_html))
+
     for link in start_soup.find_all('link', rel='stylesheet'):
         href = link.get('href')
-        css_path = os.path.join(os.path.dirname(start_html), href)
+        if not href:
+            continue
+        css_path = os.path.normpath(os.path.join(start_dir, href))
         if os.path.exists(css_path):
             with open(css_path, 'rb') as cssf:
                 css_content = cssf.read()
@@ -259,6 +295,8 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
             head_parts.append(
                 f'<link rel="stylesheet" type="text/css" href="{css.file_name}" />'
             )
+        for idx, rules in enumerate(inline_styles, start=1):
+            head_parts.append(f'<style type="text/css" id="inline-style-{idx}">{rules}</style>')
         return ''.join(head_parts)
 
     for idx, header in enumerate(headers, start=1):
@@ -325,6 +363,7 @@ def generate_docx_from_html(html_file: str, output_docx: str) -> None:
 
     body = soup.body or soup
     document = Document()
+    base_dir = os.path.dirname(os.path.abspath(html_file))
 
     normal_style = document.styles['Normal']
     normal_style.font.size = Pt(11)
@@ -340,6 +379,14 @@ def generate_docx_from_html(html_file: str, output_docx: str) -> None:
         code_style._element.rPr.rFonts.set(qn('w:eastAsia'), 'Microsoft YaHei')
         code_style.font.size = Pt(10)
         code_style.font.bold = False
+
+    def resolve_image_path(src: Optional[str]) -> Optional[str]:
+        if not src:
+            return None
+        path = os.path.normpath(os.path.join(base_dir, src))
+        if os.path.exists(path):
+            return path
+        return None
 
     def append_element(el):
         if isinstance(el, NavigableString):
@@ -369,6 +416,10 @@ def generate_docx_from_html(html_file: str, output_docx: str) -> None:
                     run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Microsoft YaHei')
                 elif child.name == 'a':
                     paragraph.add_run(child.get_text())
+                elif child.name == 'img':
+                    img_path = resolve_image_path(child.get('src'))
+                    if img_path:
+                        document.add_picture(img_path, width=Inches(5.5))
                 else:
                     paragraph.add_run(child.get_text())
         elif el.name in ['ul', 'ol']:
@@ -389,6 +440,10 @@ def generate_docx_from_html(html_file: str, output_docx: str) -> None:
                 cells = row.find_all(['th', 'td'])
                 for c_idx, cell in enumerate(cells):
                     table.cell(r_idx, c_idx).text = cell.get_text(strip=True)
+        elif el.name == 'img':
+            img_path = resolve_image_path(el.get('src'))
+            if img_path:
+                document.add_picture(img_path, width=Inches(5.5))
         else:
             for child in el.children:
                 append_element(child)
