@@ -67,11 +67,10 @@ jobs:
         with:
           release: '14.3'
           usesh: true
-          prepare: |
+          run: |
             pkg update -f 
             pkg install -y python3.11 py311-pip py311-mistune py311-pygments py311-beautifulsoup py311-pyinstaller || true
             pip install EbookLib weasyprint || true
-          run: |
             set -euo pipefail
             pyinstaller --clean --onefile mdconv.py
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
