@@ -34,8 +34,8 @@ GitBook 通用 PDF/EPUB 导出工具。支持代码高亮。
 ### 安装及使用方法
 
 ```sh
-# pkg install python3.11 py311-pip py311-mistune py311-pygments py311-beautifulsoup
-$ pip install EbookLib weasyprint
+# pkg install python3.11 py311-pip py311-mistune py311-pygments  py311-beautifulsoup py311-weasyprint py311-pillow
+$ pip install EbookLib
 $ cd /gitbook-pdf-export-main ①
 $ python mdconv.py Handbook
 ```
