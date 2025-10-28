@@ -8,10 +8,9 @@ import argparse
 import hashlib
 from urllib.parse import urlparse, unquote
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import mistune
 from pygments import highlight
@@ -47,59 +46,39 @@ def read_markdown_file(filename: str) -> str:
 
 
 def convert_local_paths(html_content: str, docdir: str) -> str:
-    """处理本地图片路径和链接路径（多线程版）"""
-
-    # 匹配所有 src/href
-    src_matches = re.findall(r'src="([^"]+)"', html_content)
-    href_matches = re.findall(r'href="([^"]+)"', html_content)
-    local_imgs = [unquote(m) for m in src_matches if not urlparse(m).scheme]
-
-    # 多线程复制图片
-    def copy_image(decoded):
-        abs_path = os.path.abspath(os.path.join(docdir, decoded))
-        name, ext = os.path.splitext(os.path.basename(abs_path))
-        if not re.match(r'^[A-Za-z0-9]+$', name):
-            md5 = hashlib.md5(name.encode('utf-8')).hexdigest()
-            new_name = md5 + ext
-        else:
-            new_name = f"{name}{ext}"
-        dst = os.path.join(IMAGES_DIR, new_name)
-        try:
-            shutil.copy(abs_path, dst)
-            return decoded, f'images/{new_name}'
-        except Exception as e:
-            print(f'⚠️ 复制图片失败 {abs_path}: {e}')
-            return decoded, decoded  # 出错时保留原路径
-
-    replacements = {}
-    if local_imgs:
-        print(f"🧩 开始并行复制 {len(local_imgs)} 张图片...")
-        with ThreadPoolExecutor(max_workers=min(16, os.cpu_count())) as executor:
-            futures = {executor.submit(copy_image, img): img for img in local_imgs}
-            for fut in as_completed(futures):
-                old, new = fut.result()
-                replacements[old] = new
-        print(f"✅ 图片复制完成 ({len(replacements)}/{len(local_imgs)})")
-
-    # 替换 src 路径
-    for old, new in replacements.items():
-        html_content = html_content.replace(f'src="{old}"', f'src="{new}"')
-
-    # 处理链接 .md -> anchor
-    def replace_href(match):
+    """处理本地图片路径和链接路径"""
+    def replace_src(match):
         val = match.group(1)
         decoded = unquote(val)
         parsed = urlparse(decoded)
+        # 本地资源
         if not parsed.scheme:
-            if decoded.endswith('.md'):
-                anchor = os.path.splitext(decoded)[0]
-                return f'href="#${anchor}"'
-            if '.md#' in decoded:
-                return f'href="#${decoded.split("#")[1]}"'
+            if match.group(0).startswith('src="'):
+                abs_path = os.path.abspath(os.path.join(docdir, decoded))
+                name, ext = os.path.splitext(os.path.basename(abs_path))
+                if not re.match(r'^[A-Za-z0-9]+$', name):
+                    md5 = hashlib.md5(name.encode('utf-8')).hexdigest()
+                    new_name = md5 + ext
+                else:
+                    new_name = f"{name}{ext}"
+                dst = os.path.join(IMAGES_DIR, new_name)
+                try:
+                    shutil.copy(abs_path, dst)
+                except Exception as e:
+                    print(f'Error copying {abs_path}: {e}')
+                return f'src="images/{new_name}"'
+            elif match.group(0).startswith('href="'):
+                if decoded.endswith('.md'):
+                    anchor = os.path.splitext(decoded)[0]
+                    return f'href="#${anchor}"'
+                if '.md#' in decoded:
+                    return f'href="#${decoded.split("#")[1]}"'
         return match.group(0)
 
-    html_content = re.sub(r'href="([^"]+)"', replace_href, html_content)
+    html_content = re.sub(r'src="([^"]+)"', replace_src, html_content)
+    html_content = re.sub(r'href="([^"]+)"', replace_src, html_content)
     return html_content
+
 
 class CustomRenderer(mistune.HTMLRenderer):
     """自定义 Markdown 渲染器"""
@@ -139,32 +118,26 @@ def markdown_to_html(md_text: str, docdir: str) -> str:
     return convert_local_paths(html, docdir)
 
 
-    def process_one(f):
+def combine_markdown_to_html(docdir: str, files: list, out_html: str):
+    """合并多个 Markdown 为单个 HTML"""
+    combined = ''
+    for f in files:
         if f.startswith('rawchaptertext:'):
-            title = f.split(':', 1)[1]
-            aid = re.sub(r'[^\w]+', '-', title.lower()).strip('-')
-            return f'<a id="{aid}"></a>\n<h1>{title}</h1>\n'
+            title = f.split(':',1)[1]
+            aid = re.sub(r'[^\w]+','-', title.lower()).strip('-')
+            combined += f'<a id="{aid}"></a>\n<h1>{title}</h1>\n'
+            continue
         path = os.path.join(docdir, f)
         if not os.path.exists(path):
             print(f'Warning: {path} 不存在，已跳过')
-            return ''
+            continue
         anchor = os.path.splitext(f)[0]
+        combined += f'<a id="{anchor}"></a>\n'
         md = read_markdown_file(path)
-        html = markdown_to_html(md, os.path.dirname(path))
-        return f'<a id="{anchor}"></a>\n{html}\n'
-
-    print(f"开始并行转换 {len(files)} 个 Markdown 文件...")
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        futures = {executor.submit(process_one, f): f for f in files}
-        for i, fut in enumerate(as_completed(futures), start=1):
-            results.append(fut.result())
-            if i % 5 == 0 or i == len(files):
-                print(f"✅ 已完成 {i}/{len(files)} 个文件")
-
-    combined = '\n'.join(results)
+        combined += markdown_to_html(md, os.path.dirname(path)) + '\n'
     with open(out_html, 'w', encoding='utf-8') as wf:
         wf.write(combined)
-    print(f'✅ 大的 HTML 已保存至 {out_html}')
+    print(f'Combined HTML saved to {out_html}')
 
 
 def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: str):
