@@ -10,10 +10,18 @@ from urllib.parse import urlparse, unquote
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
-import warnings
+from multiprocessing import Manager
 
-# 在导入其他模块前过滤警告
-warnings.filterwarnings("ignore", category=RuntimeWarning, module="importlib._bootstrap")
+from weasyprint import HTML
+from weasyprint.text.fonts import FontConfiguration
+
+import mistune
+from pygments import highlight
+from pygments.lexers import get_lexer_by_name
+from pygments.formatters import html as pygments_html_formatter
+
+from ebooklib import epub
+from bs4 import BeautifulSoup
 
 # 常量定义
 BUILD_DIR = 'build'
@@ -54,17 +62,9 @@ def copy_single_image(args):
         return False, f"{src_path}: {e}"
 
 
-def init_worker(images_dir):
-    """初始化工作进程"""
-    global IMAGES_DIR
-    IMAGES_DIR = images_dir
-    # 在工作进程中过滤警告
-    warnings.filterwarnings("ignore", category=RuntimeWarning, module="importlib._bootstrap")
-
-
 def convert_local_paths_worker(args):
     """处理本地图片路径和链接路径 - 多进程工作函数"""
-    html_content, docdir = args
+    html_content, docdir, images_dir = args
     
     # 收集所有需要复制的图片任务
     copy_tasks = []
@@ -84,7 +84,7 @@ def convert_local_paths_worker(args):
                     new_name = md5 + ext
                 else:
                     new_name = f"{name}{ext}"
-                dst = os.path.join(IMAGES_DIR, new_name)
+                dst = os.path.join(images_dir, new_name)
                 
                 # 记录需要复制的任务
                 copy_tasks.append((abs_path, dst))
@@ -104,17 +104,52 @@ def convert_local_paths_worker(args):
     return html_content, copy_tasks
 
 
-class CustomRenderer:
-    """自定义 Markdown 渲染器 - 避免在子进程中重复导入"""
-    def __init__(self):
-        # 延迟导入，避免在子进程中重复导入的开销
-        from pygments import highlight
-        from pygments.lexers import get_lexer_by_name
-        from pygments.formatters import html as pygments_html_formatter
-        self.highlight = highlight
-        self.get_lexer_by_name = get_lexer_by_name
-        self.HtmlFormatter = pygments_html_formatter.HtmlFormatter
+def convert_local_paths_parallel(html_contents, docdirs, images_dir, max_workers=None):
+    """并行处理多个 HTML 内容的本地路径转换"""
+    if max_workers is None:
+        max_workers = min(16, multiprocessing.cpu_count())
     
+    print(f"开始并行处理 {len(html_contents)} 个 HTML 文件的本地路径...")
+    
+    # 准备任务
+    tasks = [(html_content, docdir, images_dir) 
+             for html_content, docdir in zip(html_contents, docdirs)]
+    
+    all_copy_tasks = []
+    processed_htmls = []
+    
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        # 提交所有任务
+        future_to_index = {
+            executor.submit(convert_local_paths_worker, task): i 
+            for i, task in enumerate(tasks)
+        }
+        
+        # 收集结果
+        for future in as_completed(future_to_index):
+            index = future_to_index[future]
+            try:
+                html_content, copy_tasks = future.result()
+                processed_htmls.append((index, html_content))
+                all_copy_tasks.extend(copy_tasks)
+                print(f"[{len(processed_htmls)}/{len(tasks)}] 已处理 HTML 文件")
+            except Exception as exc:
+                print(f"处理 HTML 文件时出错: {exc}")
+                # 保持原始内容作为后备
+                processed_htmls.append((index, html_contents[index]))
+    
+    # 按原始顺序排序
+    processed_htmls.sort(key=lambda x: x[0])
+    final_htmls = [html for _, html in processed_htmls]
+    
+    # 去重复制任务（避免重复复制同一图片）
+    unique_copy_tasks = list(set(all_copy_tasks))
+    
+    return final_htmls, unique_copy_tasks
+
+
+class CustomRenderer(mistune.HTMLRenderer):
+    """自定义 Markdown 渲染器"""
     def heading(self, text, level, raw=None):
         anchor = re.sub(r'[^\w]+', '-', text.lower()).strip('-')
         return f'<h{level+1} id="{anchor}">{text}</h{level+1}>'
@@ -122,13 +157,13 @@ class CustomRenderer:
     def block_code(self, code, info=None):
         if info:
             try:
-                lexer = self.get_lexer_by_name(info.strip(), stripall=True)
+                lexer = get_lexer_by_name(info.strip(), stripall=True)
             except Exception:
-                lexer = self.get_lexer_by_name('text', stripall=True)
+                lexer = get_lexer_by_name('text', stripall=True)
         else:
-            lexer = self.get_lexer_by_name('text', stripall=True)
-        fmt = self.HtmlFormatter()
-        return self.highlight(code, lexer, fmt)
+            lexer = get_lexer_by_name('text', stripall=True)
+        fmt = pygments_html_formatter.HtmlFormatter()
+        return highlight(code, lexer, fmt)
 
     def strikethrough(self, text):
         return f'<del>{text}</del>'
@@ -139,45 +174,60 @@ class CustomRenderer:
             chk = 'checked' if m.group(1).lower()=='x' else ''
             content = text[m.end():]
             return f'<li><input type="checkbox" disabled {chk}> {content}</li>'
-        return f'<li>{text}</li>'
+        return super().list_item(text)
 
 
 def markdown_to_html_worker(args):
     """将单个 Markdown 转换为 HTML - 多进程工作函数"""
     md_text, docdir = args
     
-    # 在工作进程中创建渲染器和处理器
-    renderer = CustomRenderer()
-    
-    # 使用简单的正则替换实现基本 Markdown 解析
-    # 这样可以避免在子进程中导入 mistune
-    html = md_text
-    
-    # 标题
-    html = re.sub(r'^# (.+)$', lambda m: renderer.heading(m.group(1), 0), html, flags=re.MULTILINE)
-    html = re.sub(r'^## (.+)$', lambda m: renderer.heading(m.group(1), 1), html, flags=re.MULTILINE)
-    html = re.sub(r'^### (.+)$', lambda m: renderer.heading(m.group(1), 2), html, flags=re.MULTILINE)
-    
-    # 代码块
-    html = re.sub(r'```(\w+)?\n(.*?)\n```', 
-                 lambda m: renderer.block_code(m.group(2), m.group(1)), 
-                 html, flags=re.DOTALL)
-    
-    # 删除线
-    html = re.sub(r'~~(.*?)~~', lambda m: renderer.strikethrough(m.group(1)), html)
-    
-    # 列表项
-    html = re.sub(r'^\s*-\s+(.+)$', lambda m: renderer.list_item(m.group(1)), html, flags=re.MULTILINE)
-    
-    # 段落（简单处理）
-    html = re.sub(r'^(?!<[hli])(.+)$', r'<p>\1</p>', html, flags=re.MULTILINE)
+    renderer = CustomRenderer(escape=False)
+    # 启用脚注插件
+    md = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough', 'footnotes'])
+    html = md(md_text)
     
     return html
 
 
+def markdown_to_html_parallel(md_texts, docdirs, max_workers=None):
+    """并行将多个 Markdown 转换为 HTML"""
+    if max_workers is None:
+        max_workers = min(16, multiprocessing.cpu_count())
+    
+    print(f"开始并行处理 {len(md_texts)} 个 Markdown 文件...")
+    
+    # 准备任务
+    tasks = [(md_text, docdir) for md_text, docdir in zip(md_texts, docdirs)]
+    
+    processed_htmls = []
+    
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        # 提交所有任务
+        future_to_index = {
+            executor.submit(markdown_to_html_worker, task): i 
+            for i, task in enumerate(tasks)
+        }
+        
+        # 收集结果
+        for future in as_completed(future_to_index):
+            index = future_to_index[future]
+            try:
+                html_content = future.result()
+                processed_htmls.append((index, html_content))
+                print(f"[{len(processed_htmls)}/{len(tasks)}] 已转换 Markdown 文件")
+            except Exception as exc:
+                print(f"转换 Markdown 文件时出错: {exc}")
+                # 返回原始文本作为后备
+                processed_htmls.append((index, f"<pre>{md_texts[index]}</pre>"))
+    
+    # 按原始顺序排序
+    processed_htmls.sort(key=lambda x: x[0])
+    return [html for _, html in processed_htmls]
+
+
 def process_single_markdown_file(args):
     """处理单个 Markdown 文件 - 用于多进程处理"""
-    file_info, docdir = args
+    file_info, docdir, images_dir = args
     
     if file_info.startswith('rawchaptertext:'):
         title = file_info.split(':', 1)[1]
@@ -191,11 +241,13 @@ def process_single_markdown_file(args):
     anchor = os.path.splitext(file_info)[0]
     md_content = read_markdown_file(path)
     
-    # 转换 Markdown 到 HTML
-    html_content = markdown_to_html_worker((md_content, os.path.dirname(path)))
+    # 创建独立的渲染器实例
+    renderer = CustomRenderer(escape=False)
+    md = mistune.create_markdown(renderer=renderer, plugins=['table', 'strikethrough', 'footnotes'])
+    html_content = md(md_content)
     
     # 转换本地路径并收集图片任务
-    html_content, copy_tasks = convert_local_paths_worker((html_content, os.path.dirname(path)))
+    html_content, copy_tasks = convert_local_paths_worker((html_content, os.path.dirname(path), images_dir))
     
     return f'<a id="{anchor}"></a>\n{html_content}\n', copy_tasks
 
@@ -203,21 +255,17 @@ def process_single_markdown_file(args):
 def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, max_workers=None):
     """合并多个 Markdown 为单个 HTML - 多进程版本"""
     if max_workers is None:
-        max_workers = min(8, multiprocessing.cpu_count())  # 减少进程数以降低内存使用
+        max_workers = min(16, multiprocessing.cpu_count())
     
     print(f"开始并行处理 {len(files)} 个 Markdown 文件...")
     
     # 准备任务
-    tasks = [(file_info, docdir) for file_info in files]
+    tasks = [(file_info, docdir, IMAGES_DIR) for file_info in files]
     
     combined_parts = [None] * len(files)
     all_copy_tasks = []
     
-    with ProcessPoolExecutor(
-        max_workers=max_workers,
-        initializer=init_worker,
-        initargs=(IMAGES_DIR,)
-    ) as executor:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         # 提交所有任务
         future_to_index = {
             executor.submit(process_single_markdown_file, task): i 
@@ -225,7 +273,6 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, m
         }
         
         # 收集结果
-        completed_count = 0
         for future in as_completed(future_to_index):
             index = future_to_index[future]
             try:
@@ -233,17 +280,16 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, m
                 combined_parts[index] = html_content
                 all_copy_tasks.extend(copy_tasks)
                 
-                completed_count += 1
                 file_info = files[index]
                 if file_info.startswith('rawchaptertext:'):
                     title = file_info.split(':', 1)[1]
-                    print(f"[{completed_count}/{len(files)}] 已处理章节: {title}")
+                    print(f"[{len([x for x in combined_parts if x is not None])}/{len(files)}] 已处理章节: {title}")
                 else:
-                    print(f"[{completed_count}/{len(files)}] 已处理文件: {file_info}")
+                    print(f"[{len([x for x in combined_parts if x is not None])}/{len(files)}] 已处理文件: {file_info}")
             except Exception as exc:
-                completed_count += 1
+                current_count = len([x for x in combined_parts if x is not None])
                 file_info = files[index]
-                print(f"[{completed_count}/{len(files)}] 处理文件 {file_info} 时出错: {exc}")
+                print(f"[{current_count}/{len(files)}] 处理文件 {file_info} 时出错: {exc}")
                 combined_parts[index] = f'<!-- Error processing {file_info}: {exc} -->\n'
     
     # 并行复制图片
@@ -252,21 +298,16 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, m
         unique_copy_tasks = list(set(all_copy_tasks))
         print(f"开始并行复制 {len(unique_copy_tasks)} 个图片文件...")
         
-        # 使用更少的进程数来复制图片（通常是 I/O 密集型）
-        copy_workers = min(4, multiprocessing.cpu_count())
-        
-        with ProcessPoolExecutor(max_workers=copy_workers) as executor:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(copy_single_image, task): task for task in unique_copy_tasks}
             
             success_count = 0
-            for i, future in enumerate(as_completed(futures)):
+            for future in as_completed(futures):
                 success, result = future.result()
                 if success:
                     success_count += 1
                 else:
                     print(f"复制失败: {result}")
-                if (i + 1) % 10 == 0:  # 每10个文件报告一次进度
-                    print(f"[{i + 1}/{len(unique_copy_tasks)}] 图片复制进度")
             
             print(f"图片复制完成: {success_count}/{len(unique_copy_tasks)} 成功")
     
@@ -280,10 +321,6 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, m
 
 def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: str):
     """使用 EbookLib 从 HTML 生成 EPUB，包含 start.html 和 CSS"""
-    # 延迟导入，避免在子进程中导入
-    from ebooklib import epub
-    from bs4 import BeautifulSoup
-    
     # 读取合并后的内容
     with open(html_file, 'r', encoding='utf-8') as f:
         soup = BeautifulSoup(f, 'html.parser')
@@ -367,10 +404,6 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
 
 
 def main(docdir: str):
-    # 延迟导入 weasyprint，避免在子进程中导入
-    from weasyprint import HTML
-    from weasyprint.text.fonts import FontConfiguration
-    
     prepare_build_dir(BUILD_DIR)
 
     # 处理 SUMMARY.md
