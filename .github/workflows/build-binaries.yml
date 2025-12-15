@@ -51,7 +51,7 @@ jobs:
           fi
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
           path: release/*
@@ -76,7 +76,7 @@ jobs:
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: mdconv-freebsd
           path: mdconv-freebsd.tar.gz
