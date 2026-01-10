@@ -378,7 +378,7 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, m
             except Exception as exc:
                 current_count = len([x for x in combined_parts if x is not None])
                 file_info = files[index]
-                print(f"[{current_count}/{len(files)}] 处理文件 {file_info} 时出错: {exc}")
+                print(f"{current_count}/{len(files)}] 处理文件 {file_info} 时出错: {exc}")
                 combined_parts[index] = f'<!-- Error processing {file_info}: {exc} -->\n'
 
     # 并行复制本地图片
@@ -409,7 +409,10 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str, m
 
 
 def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: str):
-    """使用 EbookLib 从 HTML 生成 EPUB，包含 start.html 和 CSS"""
+    """使用 EbookLib 从 HTML 生成 EPUB，包含 start.html 和 CSS
+
+    如果存在 images/book-logo.png，会将其作为封面并在目录/顺序中放在第一位。
+    """
     # 读取合并后的内容
     with open(html_file, 'r', encoding='utf-8') as f:
         soup = BeautifulSoup(f, 'html.parser')
@@ -440,6 +443,7 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
 
     # 添加图片资源
     images_dir = os.path.join(os.path.dirname(html_file), 'images')
+    cover_item = None
     if os.path.exists(images_dir):
         for img_name in os.listdir(images_dir):
             img_path = os.path.join(images_dir, img_name)
@@ -465,6 +469,21 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
             )
             book.add_item(img_item)
 
+            # 记录是否为封面（文件名 book-logo.png）
+            if img_name.lower() == 'book-logo.png':
+                cover_item = (img_name, img_content)
+
+    # 如果找到封面，则设置 EPUB 封面
+    cover_chapter = None
+    if cover_item is not None:
+        img_name, img_content = cover_item
+        try:
+            # EbookLib 提供 set_cover(file_name, content)
+            book.set_cover(img_name, img_content)
+        except Exception:
+            # 若 set_cover 不成功，也保守继续并添加一个封面章节
+            pass
+
     # 按 H1/H2 拆分章节
     chapters = []
     for idx, header in enumerate(soup.find_all(['h1', 'h2'])):
@@ -475,7 +494,7 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
         )
         content = [header]
         for sib in header.next_siblings:
-            if sib.name in ['h1', 'h2']:
+            if getattr(sib, 'name', None) in ['h1', 'h2']:
                 break
             content.append(sib)
         chap.content = ''.join(str(tag) for tag in content)
@@ -484,11 +503,30 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
         book.add_item(chap)
         chapters.append(chap)
 
-    # 定义目录和 spine
-    book.toc = tuple(chapters)
+    # 如果有封面图片，创建一个封面章节并放到目录和 spine 的最前面
+    if cover_item is not None:
+        cover_chapter = epub.EpubHtml(title='Cover', file_name='cover.xhtml', lang='zh')
+        cover_chapter.content = '<div class="cover"><img src="images/book-logo.png" alt="Cover"/></div>'
+        for css in css_items:
+            cover_chapter.add_link(href=css.file_name, rel='stylesheet', type='text/css')
+        book.add_item(cover_chapter)
+
+    # 定义目录和 spine（将 cover 放在最前）
+    toc_list = []
+    if cover_chapter is not None:
+        toc_list.append(cover_chapter)
+    toc_list.extend(chapters)
+
+    book.toc = tuple(toc_list)
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
-    book.spine = ['nav'] + chapters
+
+    # spine: 保持 nav 在前，随后封面（如果有）和章节
+    spine_list = ['nav']
+    if cover_chapter is not None:
+        spine_list.append(cover_chapter)
+    spine_list.extend(chapters)
+    book.spine = spine_list
 
     epub.write_epub(output_epub, book, {})
     print(f'EPUB generated via EbookLib: {output_epub}')
@@ -496,6 +534,15 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
 
 def main(docdir: str):
     prepare_build_dir(BUILD_DIR)
+
+    # 若 docdir 下存在 book-logo.png，则复制到 build/images 并在后续生成中作为封面使用
+    logo_src = os.path.join(docdir, 'book-logo.png')
+    if os.path.exists(logo_src):
+        try:
+            shutil.copy(logo_src, os.path.join(IMAGES_DIR, 'book-logo.png'))
+            print('Found book-logo.png -> copied to build/images and will be used as cover')
+        except Exception as e:
+            print(f'Failed to copy book-logo.png: {e}')
 
     # 处理 SUMMARY.md
     summ = os.path.join(docdir, SUMMARY_FILE)
@@ -516,7 +563,20 @@ def main(docdir: str):
     # 合并 start.html + combined.html
     with open(START_HTML, 'r', encoding='utf-8') as f1, \
          open(combined_html, 'r', encoding='utf-8') as f2:
-        merged = f1.read() + '\n' + f2.read()
+        start_html_content = f1.read()
+        combined_content = f2.read()
+
+    # 如果存在封面图片（已被复制到 build/images/book-logo.png），将其插入为第一页面
+    cover_html = ''
+    possible_cover = os.path.join(IMAGES_DIR, 'book-logo.png')
+    if os.path.exists(possible_cover):
+        # 插入一个简单的封面 HTML，尽量保证单独占一页
+        cover_html = ('<div class="cover-page" style="page-break-after: always; display:flex; '
+                      'align-items:center; justify-content:center; height:100vh;">'
+                      '<img src="images/book-logo.png" alt="Cover" style="max-width:90%; max-height:90vh; display:block; margin:auto;"/>'
+                      '</div>\n')
+
+    merged = cover_html + start_html_content + '\n' + combined_content
     final_html = os.path.join(BUILD_DIR, FINAL_HTML)
     with open(final_html, 'w', encoding='utf-8') as f:
         f.write(merged)
