@@ -1,4 +1,4 @@
-weasyprint>=66.0
+weasyprint>=68.0
 mistune
 pygments
 EbookLib
