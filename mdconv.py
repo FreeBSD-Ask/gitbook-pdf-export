@@ -30,12 +30,6 @@ import io
 import subprocess
 import tempfile
 
-try:
-    import fitz
-    HAS_PYMUPDF = True
-except ImportError:
-    HAS_PYMUPDF = False
-
 # 常量定义
 BUILD_DIR = 'build'
 SUMMARY_FILE = 'SUMMARY.md'
@@ -74,14 +68,30 @@ def find_latex_engine():
     return None
 
 
-def render_latex_to_png(latex_code, output_path, dpi=300):
-    """将 LaTeX 公式渲染为 PNG 图片"""
-    if not HAS_PYMUPDF:
-        raise RuntimeError("PyMuPDF 未安装，请运行: pip install PyMuPDF")
+def find_dvisvgm():
+    """查找 dvisvgm 工具"""
+    creation_flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    try:
+        result = subprocess.run(
+            ['dvisvgm', '--version'],
+            capture_output=True, timeout=10,
+            creationflags=creation_flags
+        )
+        if result.returncode == 0:
+            return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    return False
 
+
+def render_latex_to_svg(latex_code, output_path):
+    """将 LaTeX 公式渲染为 SVG 图片（通过 xelatex → XDV → dvisvgm）"""
     engine = find_latex_engine()
     if engine is None:
         raise RuntimeError("未找到 LaTeX 引擎，请安装 MiKTeX 或 TeX Live")
+
+    if not find_dvisvgm():
+        raise RuntimeError("未找到 dvisvgm，请确认 TeX 发行版完整安装")
 
     has_cjk = any('\u4e00' <= c <= '\u9fff' for c in latex_code)
     if has_cjk and engine == 'pdflatex':
@@ -92,8 +102,6 @@ def render_latex_to_png(latex_code, output_path, dpi=300):
             r'\documentclass[12pt]{article}' '\n'
             r'\usepackage{amsmath,amssymb,amsfonts}' '\n'
             r'\usepackage{ctex}' '\n'
-            r'\usepackage{xcolor}' '\n'
-            r'\pagecolor{white}' '\n'
             r'\begin{document}' '\n'
             r'\thispagestyle{empty}' '\n'
             r'\[' '\n'
@@ -107,8 +115,6 @@ def render_latex_to_png(latex_code, output_path, dpi=300):
             r'\usepackage{amsmath,amssymb,amsfonts}' '\n'
             r'\usepackage[T1]{fontenc}' '\n'
             r'\usepackage[utf8]{inputenc}' '\n'
-            r'\usepackage{xcolor}' '\n'
-            r'\pagecolor{white}' '\n'
             r'\begin{document}' '\n'
             r'\thispagestyle{empty}' '\n'
             r'\[' '\n'
@@ -121,48 +127,59 @@ def render_latex_to_png(latex_code, output_path, dpi=300):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tex_path = os.path.join(tmpdir, 'formula.tex')
-        pdf_path = os.path.join(tmpdir, 'formula.pdf')
 
         with open(tex_path, 'w', encoding='utf-8') as f:
             f.write(template % latex_code)
 
-        result = subprocess.run(
-            [engine, '-interaction=nonstopmode',
-             '-output-directory', tmpdir, tex_path],
-            capture_output=True, timeout=120,
-            cwd=tmpdir,
-            creationflags=creation_flags
-        )
+        if engine in ('xelatex', 'lualatex'):
+            # xelatex/lualatex: 编译为 XDV（不生成 PDF），再由 dvisvgm 转 SVG
+            xdv_path = os.path.join(tmpdir, 'formula.xdv')
+            result = subprocess.run(
+                [engine, '-no-pdf', '-interaction=nonstopmode',
+                 '-output-directory', tmpdir, tex_path],
+                capture_output=True, timeout=120,
+                cwd=tmpdir,
+                creationflags=creation_flags
+            )
+            if not os.path.exists(xdv_path):
+                stdout = result.stdout.decode('utf-8', errors='replace')
+                raise RuntimeError(f"{engine} 编译失败: {stdout[:500]}")
 
-        if not os.path.exists(pdf_path):
-            stderr = result.stderr.decode('utf-8', errors='replace')
-            stdout = result.stdout.decode('utf-8', errors='replace')
-            raise RuntimeError(f"{engine} 编译失败 (rc={result.returncode}): {(stderr + stdout)[:500]}")
-
-        doc = fitz.open(pdf_path)
-        page = doc[0]
-
-        blocks = page.get_text("dict")["blocks"]
-        text_blocks = [b for b in blocks if b.get("type", -1) == 0 and "bbox" in b]
-        if text_blocks:
-            x0 = min(b["bbox"][0] for b in text_blocks)
-            y0 = min(b["bbox"][1] for b in text_blocks)
-            x1 = max(b["bbox"][2] for b in text_blocks)
-            y1 = max(b["bbox"][3] for b in text_blocks)
-            pad = 10
-            clip = fitz.Rect(max(0, x0 - pad), max(0, y0 - pad), x1 + pad, y1 + pad)
+            svg_result = subprocess.run(
+                ['dvisvgm', '--no-fonts', '--exact', '-o', output_path, xdv_path],
+                capture_output=True, timeout=60,
+                creationflags=creation_flags
+            )
+            if not os.path.exists(output_path):
+                stderr = svg_result.stderr.decode('utf-8', errors='replace')
+                raise RuntimeError(f"dvisvgm 转换失败: {stderr[:500]}")
         else:
-            clip = None
+            # pdflatex: 先编译为 DVI，再由 dvisvgm 转 SVG
+            dvi_path = os.path.join(tmpdir, 'formula.dvi')
+            result = subprocess.run(
+                ['latex', '-interaction=nonstopmode',
+                 '-output-directory', tmpdir, tex_path],
+                capture_output=True, timeout=120,
+                cwd=tmpdir,
+                creationflags=creation_flags
+            )
+            if not os.path.exists(dvi_path):
+                stdout = result.stdout.decode('utf-8', errors='replace')
+                raise RuntimeError(f"latex 编译失败: {stdout[:500]}")
 
-        pix = page.get_pixmap(dpi=dpi, clip=clip)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        pix.save(output_path)
-        doc.close()
+            svg_result = subprocess.run(
+                ['dvisvgm', '--no-fonts', '--exact', '-o', output_path, dvi_path],
+                capture_output=True, timeout=60,
+                creationflags=creation_flags
+            )
+            if not os.path.exists(output_path):
+                stderr = svg_result.stderr.decode('utf-8', errors='replace')
+                raise RuntimeError(f"dvisvgm 转换失败: {stderr[:500]}")
 
 
 def preprocess_formulas(md_text, images_dir):
-    """将 Markdown 中的 LaTeX 公式替换为 PNG 图片引用"""
-    if not HAS_PYMUPDF or find_latex_engine() is None:
+    """将 Markdown 中的 LaTeX 公式替换为 SVG 图片引用"""
+    if find_latex_engine() is None:
         return md_text
 
     code_blocks = []
@@ -179,18 +196,18 @@ def preprocess_formulas(md_text, images_dir):
         if not formula:
             return match.group(0)
         h = hashlib.md5(formula.encode('utf-8')).hexdigest()[:12]
-        png_name = f'formula_{h}.png'
-        png_path = os.path.join(images_dir, png_name)
+        svg_name = f'formula_{h}.svg'
+        svg_path = os.path.join(images_dir, svg_name)
 
-        if not os.path.exists(png_path):
+        if not os.path.exists(svg_path):
             try:
-                render_latex_to_png(formula, png_path)
+                render_latex_to_svg(formula, svg_path)
                 print(f"  已渲染公式: {formula[:50]}...")
             except Exception as e:
                 print(f"  公式渲染失败: {e}")
                 return match.group(0)
 
-        return f'\n<img src="images/{png_name}" alt="formula" class="formula-display">\n'
+        return f'\n<img src="images/{svg_name}" alt="formula" class="formula-display">\n'
 
     def replace_inline(match):
         formula = match.group(1).strip()
@@ -199,18 +216,18 @@ def preprocess_formulas(md_text, images_dir):
         if '\\' not in formula and '_' not in formula and '^' not in formula:
             return match.group(0)
         h = hashlib.md5(formula.encode('utf-8')).hexdigest()[:12]
-        png_name = f'formula_{h}.png'
-        png_path = os.path.join(images_dir, png_name)
+        svg_name = f'formula_{h}.svg'
+        svg_path = os.path.join(images_dir, svg_name)
 
-        if not os.path.exists(png_path):
+        if not os.path.exists(svg_path):
             try:
-                render_latex_to_png(formula, png_path)
+                render_latex_to_svg(formula, svg_path)
                 print(f"  已渲染行内公式: {formula[:50]}...")
             except Exception as e:
                 print(f"  行内公式渲染失败: {e}")
                 return match.group(0)
 
-        return f'<img src="images/{png_name}" alt="formula" class="formula-inline">'
+        return f'<img src="images/{svg_name}" alt="formula" class="formula-inline">'
 
     md_text = re.sub(r'\$\$([\s\S]*?)\$\$', replace_display, md_text)
     md_text = re.sub(r'(?<!\$)\$(?!\$)([^\$\n]+?)\$(?!\$)', replace_inline, md_text)
@@ -725,14 +742,11 @@ def main(docdir: str):
     prepare_build_dir(BUILD_DIR)
 
     # 检测 LaTeX 引擎（公式渲染支持）
-    if HAS_PYMUPDF:
-        engine = find_latex_engine()
-        if engine:
-            print(f"公式渲染支持: 已启用 (引擎: {engine})")
-        else:
-            print("公式渲染支持: 未启用 (未找到 LaTeX 引擎，如需公式支持请安装 MiKTeX 或 TeX Live)")
+    engine = find_latex_engine()
+    if engine:
+        print(f"公式渲染支持: 已启用 (引擎: {engine})")
     else:
-        print("公式渲染支持: 未启用 (PyMuPDF 未安装，请运行: pip install PyMuPDF)")
+        print("公式渲染支持: 未启用 (未找到 LaTeX 引擎，如需公式支持请安装 MiKTeX 或 TeX Live)")
 
     # 若 docdir 下存在 book-logo.png，则复制到 build/images 并在后续生成中作为封面使用
     logo_src = os.path.join(docdir, 'book-logo.png')

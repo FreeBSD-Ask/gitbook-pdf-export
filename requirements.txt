@@ -3,4 +3,3 @@ mistune
 pygments
 EbookLib
 beautifulsoup4
-PyMuPDF
