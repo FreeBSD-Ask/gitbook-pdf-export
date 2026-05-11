@@ -27,6 +27,14 @@ from bs4 import BeautifulSoup
 import urllib.request
 import mimetypes
 import io
+import subprocess
+import tempfile
+
+try:
+    import fitz
+    HAS_PYMUPDF = True
+except ImportError:
+    HAS_PYMUPDF = False
 
 # 常量定义
 BUILD_DIR = 'build'
@@ -39,6 +47,178 @@ CSS_DIR = 'css'
 
 # 全局变量，会在每个子进程中重新初始化
 IMAGES_DIR = None
+
+LATEX_ENGINE = None
+
+
+def find_latex_engine():
+    """查找可用的 LaTeX 引擎（优先 xelatex > lualatex > pdflatex）"""
+    global LATEX_ENGINE
+    if LATEX_ENGINE is not None:
+        return LATEX_ENGINE if LATEX_ENGINE else None
+    creation_flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    for engine in ['xelatex', 'lualatex', 'pdflatex']:
+        try:
+            result = subprocess.run(
+                [engine, '--version'],
+                capture_output=True, timeout=10,
+                creationflags=creation_flags
+            )
+            if result.returncode == 0:
+                LATEX_ENGINE = engine
+                print(f"LaTeX 引擎检测: 使用 {engine}")
+                return engine
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            continue
+    LATEX_ENGINE = ''
+    return None
+
+
+def render_latex_to_png(latex_code, output_path, dpi=300):
+    """将 LaTeX 公式渲染为 PNG 图片"""
+    if not HAS_PYMUPDF:
+        raise RuntimeError("PyMuPDF 未安装，请运行: pip install PyMuPDF")
+
+    engine = find_latex_engine()
+    if engine is None:
+        raise RuntimeError("未找到 LaTeX 引擎，请安装 MiKTeX 或 TeX Live")
+
+    has_cjk = any('\u4e00' <= c <= '\u9fff' for c in latex_code)
+    if has_cjk and engine == 'pdflatex':
+        raise RuntimeError("公式包含中文字符，但 xelatex/lualatex 不可用")
+
+    if engine in ('xelatex', 'lualatex'):
+        template = (
+            r'\documentclass[12pt]{article}' '\n'
+            r'\usepackage{amsmath,amssymb,amsfonts}' '\n'
+            r'\usepackage{ctex}' '\n'
+            r'\usepackage{xcolor}' '\n'
+            r'\pagecolor{white}' '\n'
+            r'\begin{document}' '\n'
+            r'\thispagestyle{empty}' '\n'
+            r'\[' '\n'
+            '%s' '\n'
+            r'\]' '\n'
+            r'\end{document}'
+        )
+    else:
+        template = (
+            r'\documentclass[12pt]{article}' '\n'
+            r'\usepackage{amsmath,amssymb,amsfonts}' '\n'
+            r'\usepackage[T1]{fontenc}' '\n'
+            r'\usepackage[utf8]{inputenc}' '\n'
+            r'\usepackage{xcolor}' '\n'
+            r'\pagecolor{white}' '\n'
+            r'\begin{document}' '\n'
+            r'\thispagestyle{empty}' '\n'
+            r'\[' '\n'
+            '%s' '\n'
+            r'\]' '\n'
+            r'\end{document}'
+        )
+
+    creation_flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tex_path = os.path.join(tmpdir, 'formula.tex')
+        pdf_path = os.path.join(tmpdir, 'formula.pdf')
+
+        with open(tex_path, 'w', encoding='utf-8') as f:
+            f.write(template % latex_code)
+
+        result = subprocess.run(
+            [engine, '-interaction=nonstopmode',
+             '-output-directory', tmpdir, tex_path],
+            capture_output=True, timeout=120,
+            cwd=tmpdir,
+            creationflags=creation_flags
+        )
+
+        if not os.path.exists(pdf_path):
+            stderr = result.stderr.decode('utf-8', errors='replace')
+            stdout = result.stdout.decode('utf-8', errors='replace')
+            raise RuntimeError(f"{engine} 编译失败 (rc={result.returncode}): {(stderr + stdout)[:500]}")
+
+        doc = fitz.open(pdf_path)
+        page = doc[0]
+
+        blocks = page.get_text("dict")["blocks"]
+        text_blocks = [b for b in blocks if b.get("type", -1) == 0 and "bbox" in b]
+        if text_blocks:
+            x0 = min(b["bbox"][0] for b in text_blocks)
+            y0 = min(b["bbox"][1] for b in text_blocks)
+            x1 = max(b["bbox"][2] for b in text_blocks)
+            y1 = max(b["bbox"][3] for b in text_blocks)
+            pad = 10
+            clip = fitz.Rect(max(0, x0 - pad), max(0, y0 - pad), x1 + pad, y1 + pad)
+        else:
+            clip = None
+
+        pix = page.get_pixmap(dpi=dpi, clip=clip)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        pix.save(output_path)
+        doc.close()
+
+
+def preprocess_formulas(md_text, images_dir):
+    """将 Markdown 中的 LaTeX 公式替换为 PNG 图片引用"""
+    if not HAS_PYMUPDF or find_latex_engine() is None:
+        return md_text
+
+    code_blocks = []
+
+    def save_code_block(match):
+        code_blocks.append(match.group(0))
+        return f'\x00CODEBLOCK{len(code_blocks) - 1}\x00'
+
+    md_text = re.sub(r'```[\s\S]*?```', save_code_block, md_text)
+    md_text = re.sub(r'`[^`]+`', save_code_block, md_text)
+
+    def replace_display(match):
+        formula = match.group(1).strip()
+        if not formula:
+            return match.group(0)
+        h = hashlib.md5(formula.encode('utf-8')).hexdigest()[:12]
+        png_name = f'formula_{h}.png'
+        png_path = os.path.join(images_dir, png_name)
+
+        if not os.path.exists(png_path):
+            try:
+                render_latex_to_png(formula, png_path)
+                print(f"  已渲染公式: {formula[:50]}...")
+            except Exception as e:
+                print(f"  公式渲染失败: {e}")
+                return match.group(0)
+
+        return f'\n<img src="images/{png_name}" alt="formula" class="formula-display">\n'
+
+    def replace_inline(match):
+        formula = match.group(1).strip()
+        if not formula:
+            return match.group(0)
+        if '\\' not in formula and '_' not in formula and '^' not in formula:
+            return match.group(0)
+        h = hashlib.md5(formula.encode('utf-8')).hexdigest()[:12]
+        png_name = f'formula_{h}.png'
+        png_path = os.path.join(images_dir, png_name)
+
+        if not os.path.exists(png_path):
+            try:
+                render_latex_to_png(formula, png_path)
+                print(f"  已渲染行内公式: {formula[:50]}...")
+            except Exception as e:
+                print(f"  行内公式渲染失败: {e}")
+                return match.group(0)
+
+        return f'<img src="images/{png_name}" alt="formula" class="formula-inline">'
+
+    md_text = re.sub(r'\$\$([\s\S]*?)\$\$', replace_display, md_text)
+    md_text = re.sub(r'(?<!\$)\$(?!\$)([^\$\n]+?)\$(?!\$)', replace_inline, md_text)
+
+    for i, code_block in enumerate(code_blocks):
+        md_text = md_text.replace(f'\x00CODEBLOCK{i}\x00', code_block)
+
+    return md_text
 
 
 def prepare_build_dir(build_dir: str) -> None:
@@ -161,6 +341,12 @@ def convert_local_paths_worker(args):
 
             # 本地资源（相对或绝对本地路径）
             if not parsed.scheme:
+                # 跳过已存在于 images 目录的公式图片
+                if decoded.startswith('images/'):
+                    basename = os.path.basename(decoded)
+                    if os.path.exists(os.path.join(images_dir, basename)):
+                        return original
+
                 abs_path = os.path.abspath(os.path.join(docdir, decoded))
                 name, ext = os.path.splitext(os.path.basename(abs_path))
                 if not re.match(r'^[A-Za-z0-9]+$', name):
@@ -329,6 +515,9 @@ def process_single_markdown_file(args):
 
     anchor = os.path.splitext(file_info)[0]
     md_content = read_markdown_file(path)
+
+    # 预处理 LaTeX 公式（渲染为 PNG 图片并替换为 <img> 标签）
+    md_content = preprocess_formulas(md_content, images_dir)
 
     # 创建独立的渲染器实例
     renderer = CustomRenderer(escape=False)
@@ -534,6 +723,16 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
 
 def main(docdir: str):
     prepare_build_dir(BUILD_DIR)
+
+    # 检测 LaTeX 引擎（公式渲染支持）
+    if HAS_PYMUPDF:
+        engine = find_latex_engine()
+        if engine:
+            print(f"公式渲染支持: 已启用 (引擎: {engine})")
+        else:
+            print("公式渲染支持: 未启用 (未找到 LaTeX 引擎，如需公式支持请安装 MiKTeX 或 TeX Live)")
+    else:
+        print("公式渲染支持: 未启用 (PyMuPDF 未安装，请运行: pip install PyMuPDF)")
 
     # 若 docdir 下存在 book-logo.png，则复制到 build/images 并在后续生成中作为封面使用
     logo_src = os.path.join(docdir, 'book-logo.png')
