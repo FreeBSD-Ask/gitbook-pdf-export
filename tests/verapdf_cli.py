@@ -10,6 +10,7 @@
 """
 
 import argparse
+import io
 import os
 import shutil
 import subprocess
@@ -73,18 +74,43 @@ def ensure_installer():
 
 
 def ensure_cli_jar(installer):
-    """从安装包提取 CLI fat jar，提取结果同样缓存复用"""
+    """从安装包提取 CLI fat jar，提取结果同样缓存复用
+
+    安装包有两种形态：早期版本直接以 IzPack 结构把 pack 放在
+    resources/packs/ 下；1.30 起是引导包（verapdf-install 脚本 +
+    verapdf-izpack-installer-*.jar），真正的 pack 在内层 jar 中。
+    """
     jar = os.path.join(cache_dir(), 'verapdf-cli-' + VERAPDF_VERSION + '.jar')
     if os.path.exists(jar) and os.path.getsize(jar) > 1024 * 1024:
         return jar
     print('Extracting CLI jar from', installer, flush=True)
-    with zipfile.ZipFile(installer) as z:
-        names = [n for n in z.namelist() if n.endswith(CLI_PACK_SUFFIX)]
-        if not names:
-            raise RuntimeError('安装包内未找到 CLI 包，含有的条目: '
-                               + ', '.join(z.namelist()[:30]))
-        with z.open(names[0]) as src, open(jar + '.part', 'wb') as dst:
-            shutil.copyfileobj(src, dst)
+    with zipfile.ZipFile(installer) as outer:
+        names = outer.namelist()
+        packs = [n for n in names if n.endswith(CLI_PACK_SUFFIX)]
+        if packs:
+            data = outer.read(packs[0])
+        else:
+            inner_jars = [n for n in names if n.endswith('.jar')]
+            if not inner_jars:
+                raise RuntimeError('安装包结构无法识别，含有的条目: '
+                                   + ', '.join(names[:10]))
+            with zipfile.ZipFile(io.BytesIO(outer.read(inner_jars[0]))) as iz:
+                packs = [n for n in iz.namelist()
+                         if n.endswith(CLI_PACK_SUFFIX)]
+                if packs:
+                    data = iz.read(packs[0])
+                else:
+                    # 兜底：pack 路径名随版本可能调整，CLI pack 是内层唯一的
+                    # 大体积条目（其它条目都是安装器自身的 class/资源）
+                    infos = sorted(iz.infolist(),
+                                   key=lambda i: i.file_size, reverse=True)
+                    if infos and infos[0].file_size > 1024 * 1024:
+                        data = iz.read(infos[0])
+                    else:
+                        raise RuntimeError('安装器内未找到 CLI 包，含有的条目: '
+                                           + ', '.join(iz.namelist()[:30]))
+    with open(jar + '.part', 'wb') as f:
+        f.write(data)
     os.replace(jar + '.part', jar)
     print('CLI jar saved to', jar, flush=True)
     return jar

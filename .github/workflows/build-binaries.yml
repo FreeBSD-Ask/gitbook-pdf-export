@@ -113,6 +113,8 @@ jobs:
   openbsd:
     name: Smoke test on OpenBSD
     runs-on: ubuntu-latest
+    # 无预编译的 lxml/Pillow，pip 需现场编译；镜像缺开发头文件时失败不阻塞发布
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
 
@@ -121,7 +123,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg_add python3 py3-pip pango py3-cairoscheme
+            pkg_add python3 py3-pip pango py3-cairoscheme libxml libxslt
             python3 -m pip install --upgrade pip --break-system-packages
           run: |
             set -euo pipefail
