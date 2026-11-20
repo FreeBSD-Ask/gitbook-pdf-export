@@ -202,6 +202,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Wait for platform artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # macOS runner 可能长时间排队，最多等 12 分钟；到点时按已有产物发布
+          for i in $(seq 1 24); do
+            n=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+                  --jq '[.artifacts[] | select(.name | startswith("mdconv-"))] | length')
+            echo "已上传的二进制 artifact: $n"
+            [ "$n" -ge 5 ] && break
+            sleep 30
+          done
+
       - uses: actions/download-artifact@v7
         with:
           path: dist
@@ -215,11 +228,7 @@ jobs:
           set -euo pipefail
           files=$(find dist -type f -name 'mdconv*' | sort)
           echo "$files"
-          count=$(echo "$files" | wc -l)
-          if [ "$count" -lt 3 ]; then
-            echo "可用二进制不足（$count 个），跳过发布"
-            exit 1
-          fi
+          test -n "$files"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" $files --clobber
           else
