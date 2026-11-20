@@ -62,6 +62,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-xetex texlive-lang-chinese fonts-wqy-microhei
 
+      # WeasyPrint 需要系统 pango/gdk-pixbuf；装齐后各平台都能真实渲染 PDF
+      - name: Install WeasyPrint runtime (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0
+
+      - name: Install WeasyPrint runtime (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install pango gdk-pixbuf libffi
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib" >> "$GITHUB_ENV"
+
+      - name: Install WeasyPrint runtime (Windows x64)
+        # Windows arm64 无 GTK 构建，该平台只验证 CLI 与 HTML 导出
+        if: runner.os == 'Windows' && runner.arch == 'X64'
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP 'gtk3-runtime.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe' -OutFile $exe
+          Start-Process -Wait -FilePath $exe -ArgumentList '/S'
+          $gtkBin = 'C:\Program Files\GTK3-Runtime Win64\bin'
+          if (-not (Test-Path $gtkBin)) { throw 'GTK runtime 安装失败' }
+          $gtkBin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
       - name: Build executable
         run: |
           pyinstaller --clean --onefile mdconv.py
@@ -88,13 +112,21 @@ jobs:
             bin="$bin.exe"
           fi
           "$bin" -h > /dev/null
-          # 再做一次 Markdown→HTML（不触发 PDF 渲染，故不依赖系统 pango/GTK）
           mkdir -p smoke-src
           printf '# Summary\n\n* [A](a.md)\n' > smoke-src/SUMMARY.md
           printf '# 冒烟\n\n正文。\n' > smoke-src/a.md
-          "$bin" smoke-src -o smoke-out --no-pdf --no-epub --no-docx
-          test -s smoke-out/final.html
-          grep -q '<h2' smoke-out/final.html
+          if [[ "$RUNNER_OS" == "Windows" && "$RUNNER_ARCH" == "ARM64" ]]; then
+            # Windows arm64 没有对应的 GTK 构建，只验证 CLI 与 HTML 导出
+            "$bin" smoke-src -o smoke-out --no-pdf --no-epub --no-docx
+            test -s smoke-out/final.html
+            grep -q '<h2' smoke-out/final.html
+          else
+            # 真实导出三格式：PDF 版本必须为 2.0，EPUB/DOCX 必须是 zip 容器
+            "$bin" smoke-src -o smoke-out --no-formula
+            head -c 8 smoke-out/final.pdf | grep -q '%PDF-2.0'
+            head -c 2 smoke-out/final.epub | grep -q 'PK'
+            head -c 2 smoke-out/final.docx | grep -q 'PK'
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -126,13 +158,15 @@ jobs:
             set -euo pipefail
             python3.12 -m unittest discover -s tests -v || true
             python3.12 -m PyInstaller --clean --onefile mdconv.py
-            # 在本平台实际运行产物：FreeBSD 有 pango，可完整导出 PDF 验证
+            # 在本平台实际运行产物：FreeBSD 有 pango，完整导出三格式
             ./dist/mdconv -h > /dev/null
             mkdir -p smoke-src
             printf '# Summary\n\n* [A](a.md)\n' > smoke-src/SUMMARY.md
             printf '# 冒烟\n\n正文。\n' > smoke-src/a.md
-            ./dist/mdconv smoke-src -o smoke-out --no-epub --no-docx --no-formula
-            test -s smoke-out/final.pdf
+            ./dist/mdconv smoke-src -o smoke-out --no-formula
+            head -c 8 smoke-out/final.pdf | grep -q '%PDF-2.0'
+            head -c 2 smoke-out/final.epub | grep -q 'PK'
+            head -c 2 smoke-out/final.docx | grep -q 'PK'
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
 
       - name: Upload artifact
