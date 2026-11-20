@@ -52,13 +52,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Install LaTeX (Ubuntu only, for formula smoke check)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-xetex texlive-lang-chinese fonts-wqy-microhei
-
       # WeasyPrint 需要系统 pango/gdk-pixbuf；装齐后各平台都能真实渲染 PDF
+      # （native 冒烟用 --no-formula，不需要 LaTeX；sample-smoke job 才装）
       - name: Install WeasyPrint runtime (Linux)
         if: runner.os == 'Linux'
         run: |
