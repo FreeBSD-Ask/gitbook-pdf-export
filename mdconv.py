@@ -12,8 +12,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 from multiprocessing import Manager
 
-from weasyprint import HTML
-from weasyprint.text.fonts import FontConfiguration
+# WeasyPrint 在导入阶段就会 dlopen 系统的 pango/cairo；只做 HTML/EPUB/Word
+# 或仅运行 -h 的环境（例如没有 GTK 的 Windows arm64）不需要它，故延迟导入
 
 import mistune
 from pygments import highlight
@@ -1460,8 +1460,11 @@ def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
             m = meta_soup.find('meta', attrs={'name': 'author'})
             author = m.get('content', '').strip() if m else None
 
-    # 生成 PDF
+    # 生成 PDF（WeasyPrint 在此处才导入，见文件头说明）
     if make_pdf:
+        from weasyprint import HTML
+        from weasyprint.text.fonts import FontConfiguration
+
         print('Generating PDF (this may take a while)...')
         _patch_pdfa4_output()
         font_conf = FontConfiguration()

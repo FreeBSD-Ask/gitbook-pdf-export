@@ -131,10 +131,10 @@ jobs:
             "$bin" smoke-src -o smoke-out --no-formula
             python -c "import sys; bad=[p for p,m in (('smoke-out/final.pdf',b'%PDF-2.0'),('smoke-out/final.epub',b'PK'),('smoke-out/final.docx',b'PK')) if open(p,'rb').read(len(m))!=m]; sys.exit('开头不符合预期: '+str(bad) if bad else 0)"
           else
-            echo "未检测到 GTK runtime，仅验证 CLI 与 HTML 导出"
-            "$bin" smoke-src -o smoke-out --no-pdf --no-epub --no-docx
+            echo "未检测到 GTK runtime，验证 CLI、HTML、EPUB 与 DOCX（跳过 PDF）"
+            "$bin" smoke-src -o smoke-out --no-pdf --no-formula
             test -s smoke-out/final.html
-            python -c "import sys; sys.exit(0 if '<h2' in open('smoke-out/final.html', encoding='utf-8').read() else 1)"
+            python -c "import sys; bad=[p for p,m in (('smoke-out/final.epub',b'PK'),('smoke-out/final.docx',b'PK')) if open(p,'rb').read(len(m))!=m]; sys.exit('开头不符合预期: '+str(bad) if bad else 0)"
           fi
 
       - name: Upload artifact
