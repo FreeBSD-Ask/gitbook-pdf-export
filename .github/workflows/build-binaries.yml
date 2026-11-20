@@ -232,6 +232,6 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" $files --clobber
           else
-            gh release create "$TAG" $files --title "$TAG" \
-              --target "$GITHUB_SHA" --generate-notes
+            # tag 已由推送建立，不能再传 --target（会尝试重建同名 tag 而失败）
+            gh release create "$TAG" $files --title "$TAG" --generate-notes
           fi
