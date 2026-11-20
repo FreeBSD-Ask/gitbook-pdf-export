@@ -1329,6 +1329,21 @@ def build_bookmark_css(depth: int) -> str:
     return '\n'.join(rules)
 
 
+def absolutize_pdf_assets(html_text: str) -> str:
+    """把 PDF 版 HTML 中指向仓库资源的相对 URL 换成 file:// 绝对 URL。
+
+    start.html 用 ../fonts/ 与 ../highlight.css 引用内置字体与高亮样式，
+    这对位于仓库根下的 build 目录成立；但输出目录可能在别处（测试用临时
+    目录、-o 指定外部路径），相对路径会让 WeasyPrint 找不到字体而回退系统
+    字体，中文缺字形时正文会变成不可提取的 CID 编码。
+    """
+    base = Path(os.path.dirname(os.path.abspath(START_HTML))).as_uri()
+    html_text = html_text.replace('url("../fonts/', f'url("{base}/fonts/')
+    html_text = html_text.replace(
+        'href="../highlight.css"', f'href="{base}/highlight.css"')
+    return html_text
+
+
 def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
          title=None, author=None, language='zh-CN',
          make_pdf=True, make_epub=True, make_docx=True, formulas_enabled=True,
@@ -1432,7 +1447,7 @@ def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
                       + pdf_merged[head_close:])
     pdf_html = os.path.join(build_dir, PDF_HTML)
     with open(pdf_html, 'w', encoding='utf-8') as f:
-        f.write(pdf_merged)
+        f.write(absolutize_pdf_assets(pdf_merged))
 
     # 默认元数据从 start.html 读取
     if title is None or author is None:

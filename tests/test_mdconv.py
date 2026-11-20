@@ -277,9 +277,9 @@ class TocPageTest(unittest.TestCase):
         self._build_doc()
         reader = pypdf.PdfReader(os.path.join(self.build, 'final.pdf'))
         toc_text = reader.pages[0].extract_text() or ''
-        # 运行环境缺中文字体时，中文会被提取成 CID 编码，故以 leader
-        # 点线判定目录条目存在，页码起点则用页脚里的中点数字判定
-        self.assertIn('.', toc_text, '目录页缺少点线条目')
+        # build 在临时目录时仍应命中内置 GB 字体（absolutize_pdf_assets），
+        # 这样中文条目可正常提取，不依赖宿主系统字体
+        self.assertIn('第一节', toc_text, '目录页缺少章节条目')
         body_text = reader.pages[1].extract_text() or ''
         self.assertIn('· 1 ·', body_text, f'正文首页页码异常: {body_text[:80]}')
 
