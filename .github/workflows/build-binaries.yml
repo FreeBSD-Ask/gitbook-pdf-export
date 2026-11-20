@@ -2,9 +2,15 @@ name: Build binaries
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 把本次构建发布到该 tag（留空只构建）
+        required: false
   push:
     branches:
       - main
+    tags:
+      - '[0-9]*'
   pull_request:
 
 permissions:
@@ -184,3 +190,39 @@ jobs:
             build-sample/final.pdf
             build-sample/final.epub
             build-sample/final.docx
+
+  release:
+    name: Publish release
+    # 推送 tag 或手动指定 release_tag 时，把本次构建的二进制发布到 Release；
+    # 只等 FreeBSD job（macOS runner 常常排队很久），其余产物按已完成的收集
+    if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') }}
+    needs:
+      - freebsd
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          files=$(find dist -type f -name 'mdconv*' | sort)
+          echo "$files"
+          count=$(echo "$files" | wc -l)
+          if [ "$count" -lt 3 ]; then
+            echo "可用二进制不足（$count 个），跳过发布"
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" $files --clobber
+          else
+            gh release create "$TAG" $files --title "$TAG" \
+              --target "$GITHUB_SHA" --generate-notes
+          fi
