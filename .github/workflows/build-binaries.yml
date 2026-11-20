@@ -91,9 +91,13 @@ jobs:
           release: '15.1-zfs'
           usesh: true
           run: |
+            # latest 源：quarterly 冻结分支的包集合落后于 ports
+            sed -i '' 's/quarterly/latest/g' /etc/pkg/FreeBSD.conf
             pkg update -f
-            # FreeBSD 15.1 的 pkg 仓库以 Python 3.12 构建，尚无 py315 包
-            pkg install -y py312-pip py312-mistune py312-pygments py312-beautifulsoup py312-pyinstaller py312-weasyprint py312-pillow py312-python-docx
+            # latest 只提供 python315 解释器与 py315-{setuptools,wheel,...} 构建工具，
+            # 第三方端口（weasyprint/pyinstaller/pillow/python-docx）仅有 py312 版本，
+            # 而从源码编译 Pillow/PyInstaller 在 CI 内不现实，故依赖取 py312 系列
+            pkg install -y py312-pip py312-mistune py312-pygments py312-beautifulsoup4 py312-pyinstaller py312-weasyprint py312-pillow py312-python-docx
             python3.12 -m pip install --break-system-packages EbookLib pypdf
             set -euo pipefail
             python3.12 -m unittest discover -s tests -v || true
