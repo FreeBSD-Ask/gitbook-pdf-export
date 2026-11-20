@@ -30,7 +30,8 @@ jobs:
       - name: Install system dependencies (WeasyPrint)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0
+          # 中文字体保证样本 PDF 的字形与文本提取可用
+          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 fonts-noto-cjk
 
       - name: Install Python dependencies
         run: |
