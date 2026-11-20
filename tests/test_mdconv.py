@@ -183,12 +183,16 @@ class MdconvTest(unittest.TestCase):
         self.assertEqual(len(names), len(set(names)), f'存在重复条目: {dup}')
 
     def test_epub_includes_embedded_css(self):
-        """EPUB 应包含 start.html 的内嵌样式"""
+        """EPUB 应包含内嵌样式，且剥离排版引擎专用的打印 CSS"""
         with zipfile.ZipFile(os.path.join(self.build, 'final.epub')) as z:
             css_names = [n for n in z.namelist() if n.endswith('.css')]
             self.assertTrue(css_names, 'EPUB 缺少样式表')
             main_css = z.read('EPUB/css/main.css').decode('utf-8')
-        self.assertIn('bookmark-level: 1', main_css)
+        self.assertIn('LXGW WenKai GB Screen', main_css)
+        # @page / bookmark-* 属于 CSS Paged Media 与排版引擎，阅读器不识别，
+        # EPUBCheck 会报 CSS-008 解析错误
+        self.assertNotIn('@page', main_css)
+        self.assertNotIn('bookmark-level', main_css)
 
     def test_epub_nav_is_nested(self):
         """EPUB 目录应按 H1/H2 建立两级层级"""

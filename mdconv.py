@@ -742,6 +742,20 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str,
     print(f'Combined HTML saved to {out_html}')
 
 
+def strip_epub_css(css: str) -> str:
+    """剥离阅读器不支持的打印专用 CSS。
+
+    @page 块（含嵌套的 margin box 规则）属于 CSS Paged Media，EPUB 阅读
+    器的解析器不识别，EPUBCheck 会报 CSS-008；bookmark-* 与 page 属性同
+    为排版引擎专用。@font-face 的 ../fonts/ 相对路径保持不变——与 EPUB
+    内 css/main.css 的位置一致。
+    """
+    css = re.sub(r'@page[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}\s*', '', css)
+    css = re.sub(r'\bbookmark-level:\s*[^;{}]+;\s*', '', css)
+    css = re.sub(r'\bpage:\s*[\w-]+;\s*', '', css)
+    return css
+
+
 def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: str,
                                 title='My Book', author=None, language='zh-CN'):
     """使用 EbookLib 从 HTML 生成 EPUB，包含 start.html 的内嵌样式与 CSS
@@ -783,11 +797,12 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
             css_rules.append(style_tag.string)
 
     if css_rules:
+        css_content = strip_epub_css('\n\n'.join(css_rules))
         css_item = epub.EpubItem(
             uid='main-css',
             file_name=os.path.join(CSS_DIR, 'main.css'),
             media_type='text/css',
-            content='\n\n'.join(css_rules).encode('utf-8')
+            content=css_content.encode('utf-8')
         )
         book.add_item(css_item)
         css_items.append(css_item)
