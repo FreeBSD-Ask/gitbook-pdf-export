@@ -301,6 +301,203 @@ class TocPageTest(unittest.TestCase):
                          ['第一章', '第一节', '第二节'])
 
 
+def docx_heading_texts(docx_path):
+    """提取 Word 文档中所有标题段落的文本（按出现顺序）"""
+    import docx
+    d = docx.Document(docx_path)
+    return [p.text for p in d.paragraphs
+            if p.style.name.startswith('Heading')]
+
+
+def epub_nav_titles(epub_path):
+    """提取 EPUB nav 的条目文本（按出现顺序）"""
+    with zipfile.ZipFile(epub_path) as z:
+        nav = next(n for n in z.namelist() if n.endswith('nav.xhtml'))
+        html = z.read(nav).decode('utf-8')
+    return re.findall(r'<a[^>]*>([^<]+)</a>', html)
+
+
+class ContentIntegrityTest(unittest.TestCase):
+    """三格式导出的内容完整性：源文档的标题、图片、代码块、内链
+
+    必须在 PDF/EPUB/Word 中等价呈现，任何一种介质不得丢内容或产坏链接。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.docdir = tempfile.mkdtemp(prefix='mdconv-ci-')
+        cls.build = tempfile.mkdtemp(prefix='mdconv-ci-build-')
+        cls.cache = tempfile.mkdtemp(prefix='mdconv-ci-cache-')
+        cls._orig_cache = os.environ.get('MDCONV_FORMULA_CACHE')
+        os.environ['MDCONV_FORMULA_CACHE'] = cls.cache
+        with open(os.path.join(cls.docdir, 'SUMMARY.md'), 'w', encoding='utf-8') as f:
+            f.write('# Summary\n\n## 卷一\n\n'
+                    '* [第一章](ch1/c1.md)\n* [第二章](ch2/c2.md)\n')
+        # ch1 一张图、ch2 两张图；两章含跨章链接、代码块与三级标题
+        for sub, num, title, pics in (('ch1', '一', '第一章', 1),
+                                      ('ch2', '二', '第二章', 2)):
+            os.makedirs(os.path.join(cls.docdir, sub, 'img'), exist_ok=True)
+            for k in range(pics):
+                make_png(os.path.join(cls.docdir, sub, 'img', f'pic{k}.png'),
+                         (k * 120, 0, 0))
+            other = 'ch2/c2.md' if sub == 'ch1' else 'ch1/c1.md'
+            other_title = '第二章' if sub == 'ch1' else '第一章'
+            body = (f'# {title}\n\n'
+                    f'参见[{other_title}]({other})。\n\n'
+                    + ''.join(f'![图{k}](img/pic{k}.png)\n\n'
+                              for k in range(pics))
+                    + f'## 第{num}节\n\n'
+                    '```sh\necho hello\n```\n\n'
+                    f'### 第{num}小节\n\n'
+                    '正文。\n')
+            fname = 'c1.md' if sub == 'ch1' else 'c2.md'
+            with open(os.path.join(cls.docdir, sub, fname), 'w', encoding='utf-8') as f:
+                f.write(body)
+        mdconv.main(cls.docdir, build_dir=cls.build, make_pdf=True,
+                    make_epub=True, make_docx=True, formulas_enabled=False,
+                    title='内容完整性')
+        cls._pdf = os.path.join(cls.build, 'final.pdf')
+        cls._epub = os.path.join(cls.build, 'final.epub')
+        cls._docx = os.path.join(cls.build, 'final.docx')
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._orig_cache is None:
+            os.environ.pop('MDCONV_FORMULA_CACHE', None)
+        else:
+            os.environ['MDCONV_FORMULA_CACHE'] = cls._orig_cache
+        shutil.rmtree(cls.docdir, ignore_errors=True)
+        shutil.rmtree(cls.build, ignore_errors=True)
+        shutil.rmtree(cls.cache, ignore_errors=True)
+
+    def source_titles(self):
+        """按 SUMMARY 顺序解析源文档的标题文本"""
+        with open(os.path.join(self.docdir, 'SUMMARY.md'), encoding='utf-8') as f:
+            summary = f.read()
+        titles = []
+        for line in summary.splitlines():
+            m = re.match(r'## (.+?)\s*$', line)
+            if m and '[' not in m.group(1):
+                titles.append(m.group(1).strip())
+        for path in re.findall(r'\[.*?\]\((.*?)\)', summary):
+            with open(os.path.join(self.docdir, path), encoding='utf-8') as f:
+                for line in f:
+                    m = re.match(r'(#+) (.+?)\s*$', line)
+                    if m:
+                        titles.append(m.group(2).strip())
+        return titles
+
+    def pdf_images(self):
+        reader = pypdf.PdfReader(self._pdf)
+        images = set()
+        for page in reader.pages:
+            xo = (page.get('/Resources') or {}).get('/XObject') or {}
+            for key, value in xo.items():
+                if value.get_object().get('/Subtype') == '/Image':
+                    images.add(key)
+        return images
+
+    def test_source_titles_match_format_structure(self):
+        """源标题集合应与 PDF 书签、EPUB nav、Word 标题一一对应"""
+        src = self.source_titles()
+        depth_two = [t for t in src if not t.endswith('小节')]
+        self.assertEqual(outline_titles(self._pdf), depth_two,
+                         'PDF 书签与源标题（到 ## 深度）不一致')
+        self.assertEqual(docx_heading_texts(self._docx), src,
+                         'Word 标题与源标题不一致')
+        # EPUB nav 只到章级（分组 + 文件标题）
+        chapters = [t for t in src if not t.startswith(('第', '第二小节'))]
+        chapters = [t for t in src if t in ('卷一', '第一章', '第二章')]
+        self.assertEqual(epub_nav_titles(self._epub),
+                         ['卷一', '第一章', '第二章'],
+                         'EPUB nav 应含分组与章标题')
+
+    def test_images_present_in_all_formats(self):
+        """三张源图片应在三种格式中都存在"""
+        self.assertGreaterEqual(len(self.pdf_images()), 3, 'PDF 缺少图片')
+        with zipfile.ZipFile(self._epub) as z:
+            media = [n for n in z.namelist()
+                     if '/images/' in n and n.endswith('.png')]
+        self.assertGreaterEqual(len(media), 3, 'EPUB 缺少图片')
+        import docx
+        d = docx.Document(self._docx)
+        self.assertGreaterEqual(len(d.inline_shapes), 3, 'Word 缺少图片')
+
+    def test_epub_images_are_packaged(self):
+        """EPUB 章节 body 引用的每张图片都必须已打包，不得断链"""
+        with zipfile.ZipFile(self._epub) as z:
+            names = set(z.namelist())
+            missing = []
+            for name in [n for n in names if n.endswith('.xhtml')]:
+                html = z.read(name).decode('utf-8')
+                for src in re.findall(r'<img[^>]+src="([^"]+)"', html):
+                    base = src.split('/')[-1]
+                    if not any(base in x for x in names):
+                        missing.append(f'{name} -> {src}')
+        self.assertEqual(missing, [], 'EPUB 存在断链图片')
+
+    def test_code_block_content_survives(self):
+        """代码块内容必须进入三种介质"""
+        reader = pypdf.PdfReader(self._pdf)
+        text = ''.join((p.extract_text() or '') for p in reader.pages)
+        self.assertIn('echo hello', text, 'PDF 丢失代码块内容')
+        with zipfile.ZipFile(self._epub) as z:
+            bodies = [re.sub(r'<[^>]+>', '', z.read(n).decode('utf-8'))
+                      for n in z.namelist() if n.endswith('.xhtml')]
+        self.assertTrue(any('echo hello' in b for b in bodies),
+                        'EPUB 丢失代码块内容')
+        import docx
+        d = docx.Document(self._docx)
+        self.assertTrue(any('echo hello' in p.text for p in d.paragraphs),
+                        'Word 丢失代码块内容')
+
+    def test_pdf_internal_links_resolve(self):
+        """PDF 里的内部链接注释必须指向有效页面
+
+        mdconv 用命名目标（named destination）定位章节，目标名必须
+        能在文档目录中解析回真实页面。
+        """
+        reader = pypdf.PdfReader(self._pdf)
+        named = reader.named_destinations
+        links = 0
+        broken = []
+        for idx, page in enumerate(reader.pages):
+            for annot in (page.get('/Annots') or []):
+                obj = annot.get_object()
+                if obj.get('/Subtype') != '/Link':
+                    continue
+                dest = obj.get('/Dest')
+                if dest is None:
+                    action = obj.get('/A')
+                    if action is not None:
+                        dest = action.get_object().get('/D')
+                if dest is None:
+                    continue
+                links += 1
+                dest_obj = dest.get_object()
+                if isinstance(dest_obj, str):
+                    # /Dest 直接是命名目标名
+                    name = dest_obj
+                else:
+                    first = dest_obj[0]
+                    name = first if isinstance(first, str) else None
+                    if name is None:
+                        target = first.get_object()
+                        if target.get('/Type') != '/Page':
+                            broken.append(f'第{idx + 1}页 -> 目标不是页面')
+                        continue
+                if name not in named:
+                    broken.append(f'第{idx + 1}页 -> 命名目标 {name!r} 不存在')
+        self.assertGreater(links, 0, '跨章链接未生成 PDF 内链')
+        self.assertEqual(broken, [], 'PDF 存在指向无效页面的内链')
+
+    def test_docx_has_toc_field(self):
+        """Word 文档必须包含 TOC 域（打开后按 F9 更新）"""
+        with zipfile.ZipFile(self._docx) as z:
+            body = z.read('word/document.xml').decode('utf-8', 'ignore')
+        self.assertIn('TOC \\o', body, 'Word 缺少 TOC 域')
+
+
 class PaginationTest(unittest.TestCase):
     """分页回归测试：封面/目录与章标题各自的分页规则不应叠加出空白页"""
 
