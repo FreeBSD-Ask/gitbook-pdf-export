@@ -68,16 +68,18 @@ def validate(epub_path, severity='error'):
     """运行 EPUBCheck；error 级问题返回 1，warning 仅在显式要求时计入
 
     发行 zip 中的 epubcheck.jar 是含依赖的 fat jar，官方脚本即
-    java -jar 方式启动。
+    java -jar 方式启动。EPUBCheck 无 --severity 选项：默认遇 error/fatal
+    以退出码 1 结束，--failonwarnings 会让 warning 也计入退出码。
     """
     jar = ensure_epubcheck()
-    cmd = ['java', '-jar', jar, '--severity', severity,
-           os.path.abspath(epub_path)]
+    cmd = ['java', '-jar', jar]
+    if severity == 'warning':
+        cmd.append('--failonwarnings')
+    cmd.append(os.path.abspath(epub_path))
     proc = subprocess.run(cmd, capture_output=True, text=True,
                           encoding='utf-8', errors='replace', timeout=1200)
     report = (proc.stdout or '') + (proc.stderr or '')
     print(report, flush=True)
-    # EPUBCheck：有 error 或 fatal 时退出码非 0
     if proc.returncode != 0:
         print('EPUB 校验未通过 (' + epub_path + ')', file=sys.stderr)
         return 1
