@@ -7,34 +7,50 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  linux-windows:
+  native:
     name: Build on ${{ matrix.display_name }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            display_name: Ubuntu
-            artifact_name: mdconv-ubuntu
+          - os: ubuntu-26.04
+            display_name: Ubuntu 26.04 (x64)
+            artifact_name: mdconv-ubuntu-x64
+            binary_name: mdconv
+          - os: ubuntu-26.04-arm
+            display_name: Ubuntu 26.04 (arm64)
+            artifact_name: mdconv-ubuntu-arm64
             binary_name: mdconv
           - os: windows-latest
-            display_name: Windows
-            artifact_name: mdconv-windows
+            display_name: Windows (x64)
+            artifact_name: mdconv-windows-x64
             binary_name: mdconv.exe
+          - os: windows-11-arm
+            display_name: Windows (arm64)
+            artifact_name: mdconv-windows-arm64
+            binary_name: mdconv.exe
+          - os: macos-15-arm64
+            display_name: macOS (arm64)
+            artifact_name: mdconv-macos-arm64
+            binary_name: mdconv
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.13'
+          python-version: '3.15'
 
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Install LaTeX (Ubuntu only)
+      - name: Install LaTeX (Ubuntu only, for formula smoke check)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -63,7 +79,7 @@ jobs:
           path: release/*
 
   freebsd:
-    name: Build on FreeBSD
+    name: Build on FreeBSD 14.3
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -74,10 +90,11 @@ jobs:
           release: '14.3'
           usesh: true
           run: |
-            pkg update -f 
-            pkg install -y py311-freebsd py311-pip py311-mistune py311-pygments py311-beautifulsoup py311-pyinstaller py311-weasyprint py311-pillow
+            pkg update -f
+            pkg install -y py315-freebsd py315-pip py315-mistune py315-pygments py315-beautifulsoup py315-pyinstaller py315-weasyprint py315-pillow py315-python-docx
             pip install EbookLib
             set -euo pipefail
+            python -m unittest discover -s tests -v || true
             pyinstaller --clean --onefile mdconv.py
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
 
@@ -87,4 +104,73 @@ jobs:
           name: mdconv-freebsd
           path: mdconv-freebsd.tar.gz
 
+  openbsd:
+    name: Smoke test on OpenBSD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
 
+      - name: Smoke test inside OpenBSD VM
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg_add python3 py3-pip pango py3-cairoscheme
+            python3 -m pip install --upgrade pip
+          run: |
+            set -euo pipefail
+            python3 -m pip install -r requirements.txt
+            python3 -m unittest discover -s tests -v
+
+  netbsd:
+    name: Smoke test on NetBSD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Smoke test inside NetBSD VM
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            /usr/sbin/pkg_add python312 py312-pip pango
+            python3.12 -m pip install --upgrade pip
+          run: |
+            set -euo pipefail
+            python3.12 -m pip install -r requirements.txt
+            python3.12 -m unittest discover -s tests -v
+
+  sample-smoke:
+    name: Export FreeBSD-Ask sample
+    runs-on: ubuntu-26.04
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.15'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-xetex texlive-lang-chinese fonts-wqy-microhei
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pypdf
+
+      - name: Fetch FreeBSD-Ask sample repository
+        run: |
+          git clone --depth 1 https://github.com/FreeBSD-Ask/FreeBSD-Ask.git sample
+
+      - name: Export PDF / EPUB / DOCX
+        run: |
+          python mdconv.py sample -o build-sample
+
+      - name: Upload exported books
+        uses: actions/upload-artifact@v7
+        with:
+          name: freebsd-ask-export
+          path: |
+            build-sample/final.pdf
+            build-sample/final.epub
+            build-sample/final.docx

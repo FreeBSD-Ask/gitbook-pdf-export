@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Unit tests and PDF/A validation
+    runs-on: ubuntu-26.04
+    timeout-minutes: 40
+    env:
+      # veraPDF 安装包约 33MB，缓存在工作区内以便 actions/cache 复用
+      VERAPDF_CLI_CACHE: ${{ github.workspace }}/.cache/verapdf
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.15'
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install system dependencies (WeasyPrint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pypdf
+
+      - name: Cache veraPDF CLI
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.VERAPDF_CLI_CACHE }}
+          key: verapdf-cli-1.30.4
+
+      - name: Run tests
+        run: |
+          python -m unittest discover -s tests -v
+
+      # 只断言 XMP 字段不足以证明满足 PDF/A-4 全部规则，
+      # 故用 veraPDF 官方 CLI 对真实产物做一次完整校验
+      - name: Build PDF/A sample
+        run: |
+          python tests/build_pdfa_sample.py pdfa-sample
+
+      - name: Validate PDF/A-4 with veraPDF
+        run: |
+          python tests/verapdf_cli.py pdfa-sample/final.pdf

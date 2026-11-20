@@ -7,171 +7,372 @@
   <meta name="description" content="FreeBSD">
   <meta name="keywords" content="FreeBSD, UNIX">
   <meta name="generator" content="WeasyPrint">
-  <meta name="pdfaid:part" content="3">
+  <meta name="pdfaid:part" content="4">
   <meta name="pdfaid:conformance" content="U">
   <meta name="dcterms.created" content="2025-04-12T15:08:29+09:00">
   <meta name="dcterms.modified" content="2025-04-12T15:08:29+09:00">
   <link rel="stylesheet" href="../highlight.css">
 
   <style>
-    /* 字体与基础结构 */
+    /* ============ 设计令牌（对齐 FreeBSD-Ask 的 VitePress 主题） ============
+       主色   --accent:      #FF0072  源站 --vp-c-brand-1（秋冬配色），仅用于装饰元素：
+                                        渐变条、引用竖线、代码块左条——白底 3.8:1，
+                                        大字号/非文字元素可用，正文文字不可用
+       正文粉 --accent-ink:  #D60060  同色相同比例加深的「文字档」，白底 5.2:1，
+                                        满足 WCAG AA，用于链接与目录页码
+       深粉   --accent-deep: #A8004E  文字档再加深（7.6:1），用于 h2、行内代码、表头线
+       暖调   --warm-*:      #F3714B / #F5A67A / #F8C27B  源站标题渐变三段，
+                                        本项目把渐变用在底线与封面而非文字填充，
+                                        因为 #F8C27B 作文字只有 1.8:1，印刷不可读
+       正文   --text:        #212529
+       次级   --muted:       #A29098（暖灰，与粉色主色调和）
+       表面   --surface:     #FAF7F8（代码底，中性偏暖）
+       线条   --line:        #F2E9ED
+       夜间模式沿用源站 OLED 策略：背景四层统一 #000，brand 转为 #3DD68C */
+    /* 字体：霞鹜文楷 GB 屏幕阅读版（国标字形，家族名与 FreeBSD-Ask 站点的 webfont 一致） */
     @font-face {
-      font-family: "WenQuanYi Micro Hei";
-      src: local("WenQuanYi Micro Hei"), local("PingFang SC"), local("Hiragino Sans GB"), local("Noto Sans CJK SC"), local("Microsoft YaHei");
-      font-display: swap;
+      font-family: "LXGW WenKai GB Screen";
+      src: url("../fonts/LXGWWenKaiGBScreen.ttf");
+      font-weight: normal;
+      font-style: normal;
     }
-	  
-    /* 页码显示 */
+    @font-face {
+      font-family: "LXGW WenKai Mono GB Screen";
+      src: url("../fonts/LXGWWenKaiMonoGBScreen.ttf");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    /* ============ 页面结构 ============ */
     @page {
       size: A4;
-      margin: 2cm 2cm 2.5cm 2cm;
+      margin: 2.2cm 2cm 2.4cm 2cm;
 
-    @bottom-center {
-      content: "第 " counter(page) " 页";
-      font-family: "WenQuanYi Micro Hei", sans-serif;
-      font-size: 14px;
-      color: black;
+      @bottom-center {
+        content: "· " counter(page) " ·";
+        font-family: "LXGW WenKai GB Screen", sans-serif;
+        font-size: 11.5px;
+        color: #A29098;
+      }
     }
-}
 
-/* 首页不显示页码 */
-@page:first {
-  @bottom-center {
-    content: "";
-  }
+    /* 封面页不显示页码，并从封面起重新计数；无封面时正文首页正常显示页码 */
+    @page cover {
+      @bottom-center {
+        content: "";
+      }
 
-  counter-reset: page 0;
-}
+      counter-reset: page 0;
+    }
 
+    .cover-page {
+      page: cover;
+    }
 
-    body {
-      font-family: "WenQuanYi Micro Hei", "Segoe UI", "San Francisco", "Roboto", "PingFang SC", sans-serif !important;
+    /* 目录页同样不显示页码并从 0 重新计数：目录跨多页时每页都归零，
+       正文第一章因此从第 1 页开始编号 */
+    @page front-matter {
+      @bottom-center {
+        content: "";
+      }
+
+      counter-reset: page 0;
+    }
+
+    .toc-page {
+      page: front-matter;
+      page-break-after: always;
+    }
+
+    /* 目录标题用 div 而非 h1，避免在书签里多出一条「目录」 */
+    .toc-heading {
+      font-size: 25px;
+      font-weight: bold;
+      color: #22201F;
+      margin: 0 0 1.3em;
+      padding-bottom: 0.35em;
+      border-bottom: 2.5px solid transparent;
+      border-image: linear-gradient(90deg, #FF0072 0%, #F3714B 55%, #F8C27B 100%) 1;
+      bookmark-level: none;
+    }
+
+    .toc-line {
       font-size: 14px;
-      line-height: 2.1;
+      line-height: 1.85;
+    }
+
+    .toc-line a {
+      color: #212529;
+      text-decoration: none;
+    }
+
+    /* 点线（leader）引导到行尾；页码由 target-counter 取目标标题所在页，
+       与页脚页码同源，故目录页码与正文页码始终一致 */
+    .toc-line a::after {
+      content: leader('. ') target-counter(attr(href), page);
+      color: #A29098;
+    }
+
+    .toc-level-1 {
+      margin-top: 0.6em;
+      font-weight: bold;
+    }
+
+    .toc-level-1 a {
+      color: #A8004E;
+    }
+
+    .toc-level-2 {
+      padding-left: 1.7em;
+    }
+
+    .toc-level-3 {
+      padding-left: 3.4em;
+    }
+
+    .toc-level-4 {
+      padding-left: 5.1em;
+    }
+
+    .toc-level-5 {
+      padding-left: 6.8em;
+    }
+
+    .toc-level-6 {
+      padding-left: 8.5em;
+    }
+
+    /* ============ 正文 ============ */
+    body {
+      font-family: "LXGW WenKai GB Screen", "PingFang SC", "Hiragino Sans GB",
+                   "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      line-height: 1.9;
       margin: 1.5em;
-      color: #222;
+      color: #212529;
       background-color: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      text-align: justify;
+      orphans: 3;
+      widows: 3;
     }
 
-    /* 黑暗模式支持 */
+    /* 黑暗模式支持（EPUB 阅读器）
+       与源站一致：OLED 纯黑底，brand 转为 #3DD68C 绿 */
     @media (prefers-color-scheme: dark) {
       body {
-        background-color: #1e1e1e;
-        color: #ddd;
+        background-color: #000000;
+        color: #E4E4E4;
       }
       a {
-        color: #66bfff;
+        color: #3DD68C;
       }
       pre {
-        background-color: #2e2e2e;
+        background-color: #0D0D0D;
+        border-color: #262626;
+        border-left-color: #2F6B52;
       }
       code {
-        background-color: #3b3b3b;
+        background-color: #141414;
+        color: #7FE3B0;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        color: #F0F0F0;
+      }
+      h2 {
+        color: #3DD68C;
+      }
+      table th {
+        background-color: #0D0D0D;
+        border-bottom-color: #3DD68C;
+        color: #F0F0F0;
+      }
+      table tr:first-child th {
+        border-top-color: #3DD68C;
+      }
+      table tr:last-child td {
+        border-bottom-color: #3DD68C;
+      }
+      table td {
+        border-bottom-color: #262626;
+      }
+      blockquote {
+        background-color: #0D1611;
+        border-left-color: #3DD68C;
+        color: #A9CDBA;
       }
     }
 
     p {
-      margin: 1em 0;
+      margin: 0.9em 0;
       text-indent: 2em;
     }
 
     strong, b {
-      font-family: "Noto Sans CJK SC", sans-serif;
       font-weight: bold;
     }
-	 /* 链接样式 */
+
+    /* 链接：正文用 #D60060（白底 5.2:1，WCAG AA）；纯 #FF0072 只作装饰 */
     a, a:hover, a:visited {
-      color: #007FFF;  /* 统一链接颜色 */
-      text-decoration: none;  /* 去除所有链接的下划线 */
+      color: #D60060;
+      text-decoration: none;
     }
-	
-	/* 引用样式 */
+
+    /* 引用：主色竖条 + 浅粉底 + 圆角 */
     blockquote {
-      border-left: 2px solid rgb(206, 219, 226);
-      margin: 1em 0;
-      padding-left: 1em;
-      color: rgb(97, 113, 121); /* 设置文字颜色为深灰蓝 */
+      border-left: 3px solid #FF0072;
+      background-color: #FFF4F8;
+      border-radius: 0 8px 8px 0;
+      margin: 1.1em 0;
+      padding: 0.7em 1.1em;
+      color: #523C44;
+      page-break-inside: avoid;
     }
-	/* 嵌套引用样式 */
+
+    /* 嵌套引用样式 */
     blockquote blockquote {
-      border-left: 2px solid rgb(206, 219, 226);
-      color: rgb(97, 113, 121); /* 设置嵌套引用的文字颜色 */
+      border-left-color: #FFB3CE;
+      background-color: transparent;
+      color: #7A5F69;
     }
 
+    /* ============ 标题体系 ============ */
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: bold;
+      color: #22201F;
+      line-height: 1.4;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
 
-/* 表格美化：三线表风格 */
-table {
-  border-collapse: collapse;
-  margin: 1.5em auto;
-  width: 100%;
-  font-size: 14px;
-}
+    /* 章标题：大号深色 + 粉→暖橙渐变底线（源站标题渐变，改用装饰线而非文字填充） */
+    h1 {
+      font-size: 25px;
+      margin: 1.7em 0 1em;
+      padding-bottom: 0.35em;
+      border-bottom: 2.5px solid transparent;
+      border-image: linear-gradient(90deg, #FF0072 0%, #F3714B 55%, #F8C27B 100%) 1;
+    }
 
-table th {
-  border-bottom: 2px solid #000;
-  font-size: 16px;
-  text-align: center;
-  padding: 8px;
-}
+    h2 {
+      font-size: 19px;
+      color: #A8004E;
+      margin: 1.5em 0 0.8em;
+    }
 
-/* 顶部边框：第一行表头的顶部 */
-table tr:first-child th {
-  border-top: 2px solid #000;
-}
+    h3 {
+      font-size: 16px;
+      color: #241C20;
+      margin: 1.2em 0 0.6em;
+    }
 
-/* 正文单元格样式 */
-table td {
-  padding: 8px;
-  text-align: left;
-}
+    h4, h5, h6 {
+      font-size: 14.5px;
+      color: #3A2E34;
+      margin: 1em 0 0.5em;
+    }
 
-/* 底部边框：最后一行的底部 */
-table tr:last-child td {
-  border-bottom: 2px solid #000;
-}
+    /* PDF 侧边栏书签：mdconv 将 Markdown 标题统一下移一级（# → h2），
+       故章标题 h2 作为一级书签，节标题依次向下；标签默认取标题文本。
+       实际层级与深度由 mdconv 按 --bookmark-depth 注入（见 build_bookmark_css），
+       这里保留一份兜底规则供 EPUB 内嵌样式使用 */
+    h1, h2 {
+      bookmark-level: 1;
+    }
 
-	/* 移除斑马纹效果 */
+    h3 {
+      bookmark-level: 2;
+    }
+
+    h4 {
+      bookmark-level: 3;
+    }
+
+    h5 {
+      bookmark-level: 4;
+    }
+
+    h6 {
+      bookmark-level: 5;
+    }
+
+    /* ============ 表格：现代三线表 ============ */
+    table {
+      border-collapse: collapse;
+      margin: 1.5em auto;
+      width: 100%;
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+
+    table th {
+      border-bottom: 1.8px solid #A8004E;
+      background-color: #FFF2F6;
+      color: #22201F;
+      font-size: 13.5px;
+      text-align: center;
+      padding: 8px 10px;
+    }
+
+    table tr:first-child th {
+      border-top: 1.8px solid #A8004E;
+    }
+
+    table td {
+      padding: 7px 10px;
+      text-align: left;
+      border-bottom: 1px solid #F5EDF0;
+    }
+
+    table tr:last-child td {
+      border-bottom: 1.8px solid #A8004E;
+    }
+
     tr:nth-child(even), tr:nth-child(odd) {
       background-color: transparent;
     }
 
-    /* 代码块和内联代码 */
+    /* ============ 代码块与行内代码 ============
+       字体为霞鹜文楷 GB 版等宽屏幕版（含英文，Inconsolata 补字） */
     pre, code, .highlight, .highlight pre {
-      font-family: "WenQuanYi Micro Hei", "Noto Sans Mono CJK SC", "Source Han Mono", monospace !important;
-    }
-	
-	/* 代码块样式 */
-	pre {
-      background-color: #ffffff;
-      border: 2px solid rgb(221, 232, 237); /*边框线颜色、宽度*/
-      border-radius: 6px;
-      padding: 1em;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 14px;
+      font-family: "LXGW WenKai Mono GB Screen", "Cascadia Mono", "Noto Sans Mono CJK SC",
+                   "Source Han Mono", monospace;
     }
 
-	/* 文本中的代码块样式 */
-	code {
-      background-color: rgb(244, 248, 250);   /* 浅蓝灰背景 */
-      border-radius: 5px;                     /* 圆角边框 */
-	  padding: 0 5px;
+    /* 代码块：偏暖中性底、无重边框、左侧主色细条（源站粉色的低饱和版） */
+    pre {
+      background-color: #FAF7F8;
+      border: 1px solid #F2E9ED;
+      border-left: 3px solid #FFB3CE;
+      border-radius: 8px;
+      padding: 0.9em 1.1em;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* 行内代码：深粉文字 + 极浅粉底 */
+    code {
+      background-color: #FFEFF5;
+      border-radius: 4px;
+      padding: 0.08em 5px;
+      font-size: 0.92em;
+      color: #A8004E;
     }
 
     pre code {
       background: none;
       border: none;
-    }
-	/* 覆盖代码块高亮的默认斜体参数，即代码块不斜体 */ 
-    .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
-      font-style: normal !important; /* 强制取消斜体 */
-      font-family: inherit !important; /* 确保继承中文字体 */
+      padding: 0;
+      color: inherit;
     }
 
-    .highlight .powershell {
-      font-family: "WenQuanYi Micro Hei", "Cascadia Mono", monospace !important;
+    /* 注释统一取消斜体（等宽文楷无斜体字形，且中文斜体在印刷中不规范） */
+    .highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf,
+    .highlight .c1, .highlight .cs, .highlight .sd, .highlight .cp {
+      font-style: normal !important;
     }
 
     td.linenos .normal, span.linenos {
@@ -181,12 +382,12 @@ table tr:last-child td {
       font-family: inherit;
     }
 
-    /* 图片通用 */
+    /* ============ 图片 ============ */
     img, svg, canvas {
       image-rendering: crisp-edges;
-      max-width: 60%;
+      max-width: 70%;
       display: block;
-      margin: 1.5em auto;
+      margin: 1.4em auto;
     }
 
     /* 公式图片样式（SVG 矢量图） */
@@ -214,11 +415,19 @@ table tr:last-child td {
       margin: 1rem 0;
     }
 
-    /* 打印优化 */
+    /* ============ 打印优化 ============ */
     @media print {
-	/* 标题分页控制 */
+      /* 标题分页控制：章标题（h2，mdconv 将 Markdown 标题统一下移一级）与节标题
+         均另起一页；封面不设「后分页」，避免与标题分页叠加出空白页 */
       h1, h2 {
         page-break-before: always;
+      }
+
+      /* 正文为扁平结构（无 section 包裹），首个标题不再强制分页，
+         否则文档没有封面时开头会多出一整页空白 */
+      h1:first-of-type,
+      h2:first-of-type {
+        page-break-before: auto;
       }
 
       h1 {
