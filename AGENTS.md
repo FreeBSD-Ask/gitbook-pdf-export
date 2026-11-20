@@ -65,7 +65,7 @@ Formula rendering is **gracefully degraded**: if a LaTeX engine is missing, form
 
 ## CI/CD
 
-- `.github/workflows/build-binaries.yml` — builds PyInstaller binaries on Python 3.15 for Ubuntu, Windows (x64/arm64), macOS, and FreeBSD 15.1 (ZFS image, py312 packages); every job runs the produced binary on its own platform (`-h` plus a real export, asserting `%PDF-2.0`); pushing a `[0-9]*` tag publishes the artifacts to a GitHub Release, and a failing platform blocks the release
+- `.github/workflows/build-binaries.yml` — builds PyInstaller binaries on Python 3.15 for Ubuntu, Windows (x64/arm64), and FreeBSD 15.1 (ZFS image, py312 packages); macOS is out of the support matrix. Every job runs the produced binary on its own platform (`-h` plus a real export, asserting `%PDF-2.0`); pushing a `[0-9]*` tag publishes the artifacts to a GitHub Release, and a failing platform blocks the release
 - `.github/workflows/tests.yml` — runs the unit test suite on Python 3.15, builds a sample PDF and validates it with veraPDF (`tests/verapdf_cli.py`, PDF/A-4 flavour 4)
 - `.github/dependabot.yml` — daily dependency updates for GitHub Actions and pip
 - WeasyPrint is imported lazily in `main()` (it dlopens pango at import time), so CLI/HTML/EPUB/DOCX work on platforms without GTK

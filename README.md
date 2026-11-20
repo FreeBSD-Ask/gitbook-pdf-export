@@ -16,15 +16,16 @@ GitBook 通用 PDF/EPUB/Word 导出工具。支持代码高亮、LaTeX 公式、
 | `mdconv-ubuntu-arm64` | Linux arm64 |
 | `mdconv-windows-x64.exe` | Windows x64 |
 | `mdconv-windows-arm64.exe` | Windows arm64 |
-| `mdconv-macos-arm64` | macOS（Apple Silicon）|
 | `mdconv-freebsd.tar.gz` | FreeBSD amd64，在 15.1 的 ZFS 根分区镜像上构建 |
+
+macOS 暂不在支持与发布矩阵内。
 
 二进制的发布门槛：每个平台都会在自己的 runner 上实际运行产物（`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`），**任一平台失败则整批不发布**。
 
 使用要点：
 
 - 把 `start.html`、`highlight.css` 与 `fonts/` 与可执行文件放在同一目录（与仓库布局一致），否则找不到样式与字体
-- WeasyPrint 需要系统 pango/gdk-pixbuf：Windows x64 需安装 [GTK3 Runtime](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)，Linux 装 `libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0`，macOS 用 `brew install pango gdk-pixbuf libffi` 并设置 `DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib`
+- WeasyPrint 需要系统 pango/gdk-pixbuf：Windows x64 需安装 [GTK3 Runtime](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)，Linux 装 `libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0`
 - Windows arm64 目前没有对应的 GTK 构建，该平台产物可完成 Markdown→HTML、EPUB 与 DOCX 导出，PDF 渲染未验证
 
 ## 文件说明
@@ -93,14 +94,9 @@ C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 └── fonts\
 ```
 
-### macOS
+## macOS
 
-```sh
-brew install pango gdk-pixbuf libffi
-export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
-pip install -r requirements.txt
-python mdconv.py Handbook
-```
+暂不在支持与发布矩阵内。欢迎 PR 补充。
 
 ## 命令行参数
 
@@ -165,6 +161,6 @@ yay -S ttf-lxgw-wenkai-screen
 ## CI 与发布
 
 - `tests.yml`：21 项回归测试 + 构建最小样本并跑 veraPDF（PDF/A-4）
-- `build-binaries.yml`：Ubuntu x64/arm64、Windows x64/arm64、macOS arm64 上用 PyInstaller 打包，FreeBSD 在 15.1 的 ZFS 镜像内构建；OpenBSD/NetBSD 做冒烟测试（缺预编译依赖时仅作参考，不阻塞发布）
+- `build-binaries.yml`：Ubuntu x64/arm64 与 Windows x64/arm64 上用 PyInstaller 打包，FreeBSD 在 15.1 的 ZFS 镜像内构建；OpenBSD/NetBSD 做冒烟测试（缺预编译依赖时仅作参考，不阻塞发布）
 - 每个平台构建后都会在本机运行产物：`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`、EPUB/DOCX 断言 zip 容器；没有 GTK 的平台只验证 CLI 与 HTML
 - 推送 `[0-9]*` 形式的 tag 会触发构建并自动把产物发布到对应 Release；任一平台构建或冒烟失败则不发布

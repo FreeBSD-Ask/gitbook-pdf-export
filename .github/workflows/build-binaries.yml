@@ -40,10 +40,6 @@ jobs:
             display_name: Windows (arm64)
             artifact_name: mdconv-windows-arm64
             binary_name: mdconv.exe
-          - os: macos-15-arm64
-            display_name: macOS (arm64)
-            artifact_name: mdconv-macos-arm64
-            binary_name: mdconv
     steps:
       - uses: actions/checkout@v7
 
@@ -67,12 +63,6 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0
-
-      - name: Install WeasyPrint runtime (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install pango gdk-pixbuf libffi
-          echo "DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib" >> "$GITHUB_ENV"
 
       - name: Install WeasyPrint runtime (Windows x64)
         # Windows arm64 无 GTK 构建，该平台只验证 CLI 与 HTML 导出
@@ -260,7 +250,7 @@ jobs:
   release:
     name: Publish release
     # 推送 tag 或手动指定 release_tag 时，把本次构建的二进制发布到 Release；
-    # 只等 FreeBSD job（macOS runner 常常排队很久），其余产物按已完成的收集
+    # 所有平台构建并通过本机冒烟测试后才发布（macOS 已放弃支持）
     if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') }}
     needs:
       - freebsd
@@ -274,8 +264,7 @@ jobs:
         run: |
           set -euo pipefail
           api="repos/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # 等各平台构建与其 smoke test 结束（macOS runner 可能排队，最多等 15 分钟）
-          deadline=$((SECONDS + 900))
+          # 等各平台构建与其冒烟测试结束
           while :; do
             jobs=$(gh api "$api/jobs" --jq \
               '[.jobs[] | select(.name | startswith("Build on ")) | {name, c: (.conclusion // .status)}]')
@@ -284,19 +273,15 @@ jobs:
             count=$(gh api "$api/artifacts" --jq \
               '[.artifacts[] | select(.name | startswith("mdconv-"))] | length')
             echo "二进制 artifact: $count"
-            if [ "$pending" -eq 0 ] && [ "$count" -ge 5 ]; then break; fi
-            if [ "$SECONDS" -ge "$deadline" ]; then break; fi
+            if [ "$pending" -eq 0 ]; then break; fi
             sleep 30
           done
-          # 构建或 smoke test 失败的平台直接取消发布；仍排队的平台不参与本次发布
-          failed=$(echo "$jobs" | jq -r \
-            '[.[] | select(.c == "failure" or .c == "cancelled" or .c == "timed_out" or .c == "startup_failure")] | length')
+          failed=$(echo "$jobs" | jq -r '[.[] | select(.c != "success")] | length')
           if [ "$failed" -ne 0 ]; then
             echo "有平台未通过构建或运行测试，取消发布："
             echo "$jobs" | jq -r '.[] | select(.c != "success") | "  \(.name): \(.c)"'
             exit 1
           fi
-          echo "$jobs" | jq -r '.[] | select(.c != "success") | "跳过（未完成，不参与本次发布）: \(.name)"'
           if [ "$count" -lt 5 ]; then
             echo "产物不足（$count 个），取消发布"
             exit 1
