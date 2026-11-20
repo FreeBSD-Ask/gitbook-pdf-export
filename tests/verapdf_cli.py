@@ -21,8 +21,11 @@ import zipfile
 
 # 固定版本号：/rel 指向最新版会随上游发版漂移，导致校验结果不可复现
 VERAPDF_VERSION = '1.30.4'
+# 下载目录按 major.minor 划分（1.30.4 的安装包位于 releases/1.30/ 下）
+_RELEASE_DIR = '.'.join(VERAPDF_VERSION.split('.')[:2])
 INSTALLER_URL = ('https://software.verapdf.org/releases/{0}/'
-                 'verapdf-greenfield-{0}-installer.zip').format(VERAPDF_VERSION)
+                 'verapdf-greenfield-{1}-installer.zip').format(
+                     _RELEASE_DIR, VERAPDF_VERSION)
 # 安装器为 IzPack 结构，CLI fat jar 位于 resources/packs/pack-veraPDF CLI
 CLI_PACK_SUFFIX = 'pack-veraPDF CLI'
 CLI_MAIN_CLASS = 'org.verapdf.apps.GreenfieldCliWrapper'
