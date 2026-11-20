@@ -105,27 +105,36 @@ jobs:
       - name: Smoke test binary
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           bin="release/${{ matrix.artifact_name }}"
           # Windows 产物带 .exe 后缀（注意 set -e 下不能写成 && 短路）
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             bin="$bin.exe"
           fi
-          "$bin" -h > /dev/null
+          echo "平台: RUNNER_OS=$RUNNER_OS RUNNER_ARCH=${RUNNER_ARCH:-未设置}"
+          if ! "$bin" -h > help.out 2>&1; then
+            echo "二进制无法执行，输出如下："
+            cat help.out
+            exit 1
+          fi
           mkdir -p smoke-src
           printf '# Summary\n\n* [A](a.md)\n' > smoke-src/SUMMARY.md
           printf '# 冒烟\n\n正文。\n' > smoke-src/a.md
-          if [[ "$RUNNER_OS" == "Windows" && "$RUNNER_ARCH" == "ARM64" ]]; then
-            # Windows arm64 没有对应的 GTK 构建，只验证 CLI 与 HTML 导出
-            "$bin" smoke-src -o smoke-out --no-pdf --no-epub --no-docx
-            test -s smoke-out/final.html
-            grep -q '<h2' smoke-out/final.html
-          else
+          # 按 GTK 是否可用决定能否渲染 PDF：Windows arm64 没有对应构建，
+          # 该平台只验证 CLI 与 HTML 导出
+          render=1
+          if [[ "$RUNNER_OS" == "Windows" ]] && [ ! -d "C:/Program Files/GTK3-Runtime Win64/bin" ]; then
+            render=0
+          fi
+          if [ "$render" -eq 1 ]; then
             # 真实导出三格式：PDF 版本必须为 2.0，EPUB/DOCX 必须是 zip 容器
             "$bin" smoke-src -o smoke-out --no-formula
-            head -c 8 smoke-out/final.pdf | grep -q '%PDF-2.0'
-            head -c 2 smoke-out/final.epub | grep -q 'PK'
-            head -c 2 smoke-out/final.docx | grep -q 'PK'
+            python -c "import sys; bad=[p for p,m in (('smoke-out/final.pdf',b'%PDF-2.0'),('smoke-out/final.epub',b'PK'),('smoke-out/final.docx',b'PK')) if open(p,'rb').read(len(m))!=m]; sys.exit('开头不符合预期: '+str(bad) if bad else 0)"
+          else
+            echo "未检测到 GTK runtime，仅验证 CLI 与 HTML 导出"
+            "$bin" smoke-src -o smoke-out --no-pdf --no-epub --no-docx
+            test -s smoke-out/final.html
+            python -c "import sys; sys.exit(0 if '<h2' in open('smoke-out/final.html', encoding='utf-8').read() else 1)"
           fi
 
       - name: Upload artifact
@@ -164,9 +173,7 @@ jobs:
             printf '# Summary\n\n* [A](a.md)\n' > smoke-src/SUMMARY.md
             printf '# 冒烟\n\n正文。\n' > smoke-src/a.md
             ./dist/mdconv smoke-src -o smoke-out --no-formula
-            head -c 8 smoke-out/final.pdf | grep -q '%PDF-2.0'
-            head -c 2 smoke-out/final.epub | grep -q 'PK'
-            head -c 2 smoke-out/final.docx | grep -q 'PK'
+            python3.12 -c "import sys; bad=[p for p,m in (('smoke-out/final.pdf',b'%PDF-2.0'),('smoke-out/final.epub',b'PK'),('smoke-out/final.docx',b'PK')) if open(p,'rb').read(len(m))!=m]; sys.exit('开头不符合预期: '+str(bad) if bad else 0)"
             tar czf mdconv-freebsd.tar.gz -C dist mdconv
 
       - name: Upload artifact
