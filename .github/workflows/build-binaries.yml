@@ -79,7 +79,7 @@ jobs:
           path: release/*
 
   freebsd:
-    name: Build on FreeBSD 14.3
+    name: Build on FreeBSD 15.1 (ZFS)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -87,7 +87,8 @@ jobs:
       - name: Build inside FreeBSD VM
         uses: vmactions/freebsd-vm@v1.6.0
         with:
-          release: '14.3'
+          # 带 -zfs 后缀的 release 使用上游 ZFS 根分区镜像（见 action 的 release 表）
+          release: '15.1-zfs'
           usesh: true
           run: |
             pkg update -f
