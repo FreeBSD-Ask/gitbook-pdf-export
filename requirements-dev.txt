@@ -1,0 +1,8 @@
+# 开发与 CI 依赖：单元测试与官方校验脚本使用
+-r requirements.txt
+
+# PDF 断言（书签、内链、XMP）与文档结构检查
+pypdf~=7.1
+
+# 测试夹具用 Pillow 生成 JPEG（验证扩展名与实际格式不符的图片）
+pillow~=13.0

@@ -40,11 +40,19 @@
 
 ### Python (pip / requirements.txt)
 
-- `weasyprint>=68.1` — PDF generation (includes CairoSVG for SVG rendering)
-- `mistune` — Markdown to HTML
-- `pygments` — Code syntax highlighting
-- `EbookLib` — EPUB generation
-- `beautifulsoup4` — HTML parsing
+Direct dependencies are pinned to the current release with a major-version
+ceiling (`~=`) because `_patch_pdfa4_output()` monkeypatches WeasyPrint
+internals; never let a major bump in silently. Dependabot watches every
+`.txt` file, including `requirements-dev.txt`.
+
+- `weasyprint~=70.0` — PDF generation (includes CairoSVG for SVG rendering)
+- `mistune~=3.4` — Markdown to HTML
+- `pygments~=2.21` — Code syntax highlighting
+- `EbookLib~=0.21` — EPUB generation
+- `beautifulsoup4~=4.15` — HTML parsing
+- `python-docx~=1.2` — Word (OOXML) generation
+- `requirements-dev.txt` — test-only additions: `pypdf` (PDF assertions) and
+  `pillow` (generating a mislabelled JPEG in the fixture)
 
 No Python package is needed for formula rendering — it relies entirely on system tools (LaTeX + dvisvgm).
 

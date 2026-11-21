@@ -44,6 +44,7 @@ sha256sum -c SHA-256SUMS
 |`start.html`|主 CSS 配置与 HTML 模板，不可删除|
 |`highlight.css`|代码高亮配色（BSD 命令自定义高亮），不可删除|
 |`fonts/`|霞鹜文楷 GB 版屏幕阅读版与等宽屏幕版，不可删除|
+|`requirements-dev.txt`|测试与 CI 依赖（pypdf、pillow）；本地跑测试用 `pip install -r requirements-dev.txt`|
 |`tests/`|回归测试、样本构建、veraPDF 与 EPUBCheck 校验脚本|
 |`build/`|输出目录，会自动生成：`final.pdf`、`final-ua.pdf`、`final.epub`、`final.docx`，以及 PDF 排版专用的 `pdf.html`|
 

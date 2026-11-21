@@ -223,7 +223,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-xetex texlive-lang-chinese fonts-wqy-microhei
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pypdf
+          pip install -r requirements.txt
 
       - name: Fetch FreeBSD-Ask sample repository
         run: |

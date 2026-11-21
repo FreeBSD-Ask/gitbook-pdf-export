@@ -1,6 +1,11 @@
-weasyprint>=70.0
-mistune
-pygments
-EbookLib
-beautifulsoup4
-python-docx
+# 运行时依赖。版本上限刻意收紧：mdconv 在渲染阶段会 patch WeasyPrint
+# 内部（DocumentMetadata / pydyf._to_bytes / RasterImage）以补齐 PDF/A-4，
+# 上游大版本改动随时会让补丁失效，故不允许跨大版本自动升级。
+# 依赖更新由 .github/dependabot.yml 每周检查；升级大版本需先跑
+# python -m unittest discover -s tests 与 veraPDF/EPUBCheck 校验。
+weasyprint~=70.0
+mistune~=3.4
+pygments~=2.21
+EbookLib~=0.21
+beautifulsoup4~=4.15
+python-docx~=1.2
