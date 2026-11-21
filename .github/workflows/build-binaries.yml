@@ -253,6 +253,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # 取完整历史与 tag，用 git log 生成 changelog：
+      # GitHub 的 --generate-notes 只列 PR，直接提交的变更会被漏掉，
+      # 导致 Release 页面只剩一行 Full Changelog 链接
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Wait for platform builds and artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -287,6 +294,36 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Generate changelog from commits
+        env:
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force origin
+          prev=$(git tag --list '[0-9]*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
+          # 只接受当前 tag 的祖先，避免误用并行分支上的 tag
+          if [ -n "$prev" ] && ! git merge-base --is-ancestor "$prev" "$TAG"; then
+            prev=""
+          fi
+          {
+            echo "## 变更"
+            echo
+            if [ -n "$prev" ]; then
+              git log --no-merges --reverse --pretty='* %s (%h)' "$prev..$TAG"
+            else
+              git log --no-merges --reverse --pretty='* %s (%h)' "$TAG"
+            fi
+            echo
+            echo "## 校验"
+            echo
+            echo '下载后执行 `sha256sum -c SHA-256SUMS`；`BUILD-INFO.txt` 记录 tag、commit 与构建时间。'
+            if [ -n "$prev" ]; then
+              echo
+              echo "**完整对比**：https://github.com/${{ github.repository }}/compare/$prev...$TAG"
+            fi
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -311,8 +348,10 @@ jobs:
             "$TAG" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD-INFO.txt
           files="$files dist/SHA-256SUMS dist/BUILD-INFO.txt"
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --notes-file release-notes.md
             gh release upload "$TAG" $files --clobber -R "$GITHUB_REPOSITORY"
           else
             # tag 已由推送建立，不能再传 --target（会尝试重建同名 tag 而失败）
-            gh release create "$TAG" -R "$GITHUB_REPOSITORY" $files --title "$TAG" --generate-notes
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" $files \
+              --title "$TAG" --notes-file release-notes.md
           fi
