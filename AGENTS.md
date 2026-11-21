@@ -30,6 +30,8 @@
 | `mdconv.py` | Main conversion script |
 | `start.html` | HTML template with CSS styles |
 | `requirements.txt` | Python dependencies |
+| `requirements-dev.txt` | Test-only dependencies (`pypdf`, `pillow`) |
+| `tools/mathjax/render.mjs` | Optional MathJax 4 + Bun renderer (run `bun install` in that directory) |
 | `tests/test_mdconv.py` | Regression tests (`python -m unittest discover -s tests`) |
 | `tests/build_pdfa_sample.py` | Builds the minimal sample PDF validated in CI |
 | `tests/verapdf_cli.py` | Downloads veraPDF CLI (cached) and validates a PDF (`-f 4` for PDF/A-4, `-f ua1` for PDF/UA-1) |
@@ -54,7 +56,13 @@ internals; never let a major bump in silently. Dependabot watches every
 - `requirements-dev.txt` — test-only additions: `pypdf` (PDF assertions) and
   `pillow` (generating a mislabelled JPEG in the fixture)
 
-No Python package is needed for formula rendering — it relies entirely on system tools (LaTeX + dvisvgm).
+No Python package is needed for formula rendering — it uses system tools (LaTeX + dvisvgm) or the optional MathJax + Bun backend.
+
+### Node/Bun (optional, MathJax formula backend)
+
+- `tools/mathjax/package.json` pins `@mathjax/src` 4.1.3; run `bun install` there.
+- The renderer imports MathJax source modules instead of the `tex-svg` bundle: the bundle preloads `a11y/sre`, whose speech worker crashes under Bun (`fetch() URL is invalid`).
+- Requirements: `bun` on PATH and `tools/mathjax/node_modules` present. `MDCONV_MATHJAX_RENDERER` can point at another copy of `render.mjs`; an empty value disables the backend.
 
 ### System (optional, for LaTeX formula support)
 
@@ -64,20 +72,21 @@ No Python package is needed for formula rendering — it relies entirely on syst
   - Ubuntu: `sudo apt install texlive-xetex texlive-lang-chinese fonts-wqy-microhei` — dvisvgm included in `texlive-extra-utils`
   - FreeBSD: `pkg install texlive-xetex` — dvisvgm included
 
-Formula rendering is **gracefully degraded**: if a LaTeX engine is missing, formulas are left as raw `$$...$$` text in the output.
+Formula rendering is **gracefully degraded**: with no usable backend the formulas are left as raw `$$...$$` text in the output.
 
 ## Formula Rendering Details
 
+- Backend selection (`--formula-engine`): `auto` (default) → LaTeX if present, otherwise MathJax for formulas without CJK, otherwise raw text; `latex` / `mathjax` force one backend. The policy reaches workers through `MDCONV_FORMULA_ENGINE`.
 - Display formulas (`$$...$$`) → `<img class="formula-display">` (block, centered, SVG vector)
 - Inline formulas (`$...$`) → `<img class="formula-inline">` (inline, height 1.2em, SVG vector)
 - Code blocks (`` ```...``` `` and `` `...` ``) are protected from formula substitution
-- Each formula is hashed (MD5, first 12 chars) for caching — re-rendering is skipped if the SVG already exists
-- CJK-containing formulas require xelatex/lualatex with `ctex` package; pdflatex will fail for CJK
-- SVG output uses `--no-fonts` flag in dvisvgm (glyphs are converted to paths, ensuring portability)
+- Each formula is hashed (MD5, first 12 chars) for caching — re-rendering is skipped if the SVG already exists. MathJax results use `formula_mathjax_<hash>.svg`, LaTeX keeps the historical `formula_<hash>.svg`, so switching backends never reuses the wrong file
+- CJK-containing formulas require xelatex/lualatex with `ctex` package; pdflatex will fail for CJK. MathJax's newcm font has no CJK glyphs, so `auto` leaves those formulas raw
+- LaTeX SVG output uses `--no-fonts` in dvisvgm; MathJax uses `fontCache: 'none'` and converts `ex` dimensions to `pt` inside `render.mjs` (WeasyPrint resolves `pt` reliably)
 
 ## CI/CD
 
 - `.github/workflows/build-binaries.yml` — builds PyInstaller binaries on Python 3.15 for Ubuntu, Windows (x64/arm64), and FreeBSD 15.1 (ZFS image, py312 packages); macOS is out of the support matrix. Every job runs the produced binary on its own platform (`-h` plus a real export, asserting `%PDF-2.0`); pushing a `[0-9]*` tag publishes the artifacts plus `SHA-256SUMS` and `BUILD-INFO.txt` to a GitHub Release, and a failing platform blocks the release
-- `.github/workflows/tests.yml` — runs the unit test suite on Python 3.15, builds a sample (PDF + PDF/UA + EPUB) and validates it with veraPDF (PDF/A-4 `-f 4`, PDF/UA-1 `-f ua1`) and EPUBCheck
+- `.github/workflows/tests.yml` — runs the 52-test suite on Python 3.15 with Bun installed (`oven-sh/setup-bun` + `bun install --frozen-lockfile` in `tools/mathjax`), builds a sample (PDF + PDF/UA + EPUB) and validates it with veraPDF (PDF/A-4 `-f 4`, PDF/UA-1 `-f ua1`) and EPUBCheck
 - `.github/dependabot.yml` — daily dependency updates for GitHub Actions and pip
 - WeasyPrint is imported lazily in `main()` (it dlopens pango at import time), so CLI/HTML/EPUB/DOCX work on platforms without GTK

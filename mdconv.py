@@ -198,6 +198,87 @@ def find_dvisvgm():
     return False
 
 
+# 可选的 MathJax + Bun 公式后端：没有 LaTeX 时用它渲染公式。
+# MathJax 的 newcm 字体不含 CJK 字形，含中文的公式仍需 LaTeX。
+MATHJAX_TOOL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                'tools', 'mathjax')
+MATHJAX_RENDERER = os.path.join(MATHJAX_TOOL_DIR, 'render.mjs')
+MATHJAX_RENDERER_CMD = None
+
+
+def find_mathjax_renderer():
+    """查找 MathJax 渲染脚本（需要 bun，且 tools/mathjax 已执行 bun install）
+
+    MDCONV_MATHJAX_RENDERER 可显式指定脚本路径（设为空字符串表示禁用）。
+    检测结果写入环境变量，供多进程 worker 复用。
+    """
+    global MATHJAX_RENDERER_CMD
+    if MATHJAX_RENDERER_CMD is not None:
+        return MATHJAX_RENDERER_CMD or None
+    env_renderer = os.environ.get('MDCONV_MATHJAX_RENDERER')
+    if env_renderer is not None:
+        MATHJAX_RENDERER_CMD = env_renderer
+        return env_renderer or None
+    if (shutil.which('bun') and os.path.isfile(MATHJAX_RENDERER)
+            and os.path.isdir(os.path.join(MATHJAX_TOOL_DIR, 'node_modules'))):
+        MATHJAX_RENDERER_CMD = MATHJAX_RENDERER
+        os.environ['MDCONV_MATHJAX_RENDERER'] = MATHJAX_RENDERER
+        return MATHJAX_RENDERER_CMD
+    MATHJAX_RENDERER_CMD = ''
+    os.environ['MDCONV_MATHJAX_RENDERER'] = ''
+    return None
+
+
+def select_formula_backend(has_cjk=False):
+    """按 --formula-engine 策略选择后端，返回 latex / mathjax / None
+
+    auto（默认）：LaTeX 优先；没有 LaTeX 时，不含中文的公式退回 MathJax，
+    含中文的公式保留原文（MathJax 字体缺 CJK 字形）。
+    """
+    policy = os.environ.get('MDCONV_FORMULA_ENGINE') or 'auto'
+    latex = find_latex_engine()
+    if policy == 'latex':
+        return 'latex' if latex else None
+    mathjax = find_mathjax_renderer()
+    if policy == 'mathjax':
+        return 'mathjax' if mathjax else None
+    if latex:
+        return 'latex'
+    if mathjax and not has_cjk:
+        return 'mathjax'
+    return None
+
+
+def render_mathjax_to_svg(latex_code, output_path):
+    """用 MathJax + Bun 把 LaTeX 公式渲染成自包含 SVG（可选后端）
+
+    与 LaTeX 后端一致，先写临时文件再原子替换；MathJax 对未定义命令
+    以非零码退出，调用方会保留公式原文。
+    """
+    renderer = find_mathjax_renderer()
+    if renderer is None:
+        raise RuntimeError(
+            '未找到 MathJax 渲染器，请安装 bun 并在 tools/mathjax 执行 bun install')
+    creation_flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    tmp_output = f'{output_path}.tmp{os.getpid()}'
+    try:
+        result = subprocess.run(
+            ['bun', renderer, latex_code, tmp_output, 'display'],
+            capture_output=True, timeout=120,
+            creationflags=creation_flags
+        )
+        if result.returncode != 0 or not os.path.exists(tmp_output):
+            message = (result.stderr or result.stdout).decode('utf-8', errors='replace')
+            raise RuntimeError(f'MathJax 渲染失败: {message[:300]}')
+        os.replace(tmp_output, output_path)
+    finally:
+        if os.path.exists(tmp_output):
+            try:
+                os.remove(tmp_output)
+            except OSError:
+                pass
+
+
 def render_latex_to_svg(latex_code, output_path):
     """将 LaTeX 公式渲染为 SVG 图片（通过 xelatex → XDV → dvisvgm）
 
@@ -312,9 +393,18 @@ def ensure_formula_svg(formula, images_dir):
     """渲染单个公式为 SVG（带持久缓存），成功返回文件名，失败返回 None
 
     缓存位于 FORMULA_CACHE_DIR（独立于 build 目录），重复构建无需重新渲染。
+    缓存文件名带后端标记：LaTeX 沿用历史命名，MathJax 产物单独存放，
+    避免切换后端（或后装 LaTeX）后读到另一后端的结果。
     """
+    has_cjk = any('\u4e00' <= c <= '\u9fff' for c in formula)
+    backend = select_formula_backend(has_cjk)
+    if backend is None:
+        if has_cjk and not find_latex_engine() and find_mathjax_renderer():
+            print('  含中文的公式需要 LaTeX 引擎（MathJax 字体不含 CJK），已保留原文')
+        return None
+
     h = hashlib.md5(formula.encode('utf-8')).hexdigest()[:12]
-    svg_name = f'formula_{h}.svg'
+    svg_name = f'formula_{h}.svg' if backend == 'latex' else f'formula_{backend}_{h}.svg'
     svg_path = os.path.join(images_dir, svg_name)
 
     if os.path.exists(svg_path):
@@ -331,7 +421,10 @@ def ensure_formula_svg(formula, images_dir):
             pass
 
     try:
-        render_latex_to_svg(formula, svg_path)
+        if backend == 'latex':
+            render_latex_to_svg(formula, svg_path)
+        else:
+            render_mathjax_to_svg(formula, svg_path)
         try:
             shutil.copy(svg_path, cached_path)
         except OSError:
@@ -345,9 +438,10 @@ def ensure_formula_svg(formula, images_dir):
 def preprocess_formulas(md_text, images_dir):
     """将 Markdown 中的 LaTeX 公式替换为 SVG 图片引用
 
-    单个 Markdown 文件内的全部公式并发渲染（LaTeX 编译为子进程，线程池即可加速）。
+    单个 Markdown 文件内的全部公式并发渲染（渲染器为子进程，线程池即可加速）。
+    后端由 --formula-engine 决定：LaTeX 或 MathJax（Bun）。
     """
-    if find_latex_engine() is None:
+    if select_formula_backend() is None:
         return md_text
 
     code_blocks = []
@@ -1592,19 +1686,36 @@ def absolutize_pdf_assets(html_text: str) -> str:
 def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
          title=None, author=None, language='zh-CN',
          make_pdf=True, make_epub=True, make_docx=True, formulas_enabled=True,
-         bookmark_depth=DEFAULT_BOOKMARK_DEPTH, make_pdf_ua=True):
+         bookmark_depth=DEFAULT_BOOKMARK_DEPTH, make_pdf_ua=True,
+         formula_engine='auto'):
     # 公式缓存目录通过环境变量传递给多进程 worker（不覆盖调用方的预先设置）
     os.environ.setdefault('MDCONV_FORMULA_CACHE', FORMULA_CACHE_DIR)
+    # 后端策略同样经环境变量传给 worker（Windows spawn 会继承当前环境）
+    os.environ['MDCONV_FORMULA_ENGINE'] = formula_engine
 
     prepare_build_dir(build_dir)
 
-    # 检测 LaTeX 引擎（公式渲染支持）
+    # 检测公式后端（LaTeX 优先，可选 MathJax + Bun）
     engine = find_latex_engine()
+    mathjax = find_mathjax_renderer()
     if formulas_enabled:
-        if engine:
+        if formula_engine == 'latex':
+            if engine:
+                print(f"公式渲染支持: 已启用 (引擎: {engine})")
+            else:
+                print("公式渲染支持: 未启用 (指定了 LaTeX，但未找到引擎)")
+        elif formula_engine == 'mathjax':
+            if mathjax:
+                print("公式渲染支持: 已启用 (后端: MathJax + Bun；中文公式保留原文)")
+            else:
+                print("公式渲染支持: 未启用 (指定了 MathJax，但未找到 bun 或 tools/mathjax/node_modules)")
+        elif engine:
             print(f"公式渲染支持: 已启用 (引擎: {engine})")
+        elif mathjax:
+            print("公式渲染支持: 已启用 (未找到 LaTeX，退回 MathJax + Bun；中文公式保留原文)")
         else:
-            print("公式渲染支持: 未启用 (未找到 LaTeX 引擎，如需公式支持请安装 MiKTeX 或 TeX Live)")
+            print("公式渲染支持: 未启用 (未找到 LaTeX 或 MathJax 后端，如需公式支持请安装 MiKTeX/TeX Live，"
+                  "或安装 bun 后在 tools/mathjax 执行 bun install)")
     else:
         print("公式渲染支持: 已禁用 (--no-formula)")
 
@@ -1774,6 +1885,10 @@ if __name__ == '__main__':
                         help='跳过 Word 文档生成')
     parser.add_argument('--no-formula', action='store_true',
                         help='跳过 LaTeX 公式渲染')
+    parser.add_argument('--formula-engine', type=str, default='auto',
+                        choices=['auto', 'latex', 'mathjax'],
+                        help='公式渲染后端：auto（默认，LaTeX 优先，无 LaTeX 时退回 '
+                             'MathJax）、latex、mathjax')
     parser.add_argument('-j', '--workers', type=int, default=None,
                         help='并行进程数（默认 CPU 核数，上限 16）')
     parser.add_argument('--title', type=str, default=None,
@@ -1794,4 +1909,5 @@ if __name__ == '__main__':
          make_pdf=not args.no_pdf, make_epub=not args.no_epub,
          make_docx=not args.no_docx, formulas_enabled=not args.no_formula,
          bookmark_depth=args.bookmark_depth,
-         make_pdf_ua=not args.no_pdf_ua)
+         make_pdf_ua=not args.no_pdf_ua,
+         formula_engine=args.formula_engine)

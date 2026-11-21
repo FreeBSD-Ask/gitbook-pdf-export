@@ -37,6 +37,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # 可选公式后端：MathJax + Bun（无 LaTeX 环境下使用）。
+      # 装好后 MathjaxRenderTest 才会真正执行，否则自动跳过。
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install MathJax renderer
+        working-directory: tools/mathjax
+        run: bun install --frozen-lockfile
+
       - name: Cache veraPDF CLI
         uses: actions/cache@v6
         with:

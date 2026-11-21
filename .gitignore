@@ -3,3 +3,4 @@
 /pdfa-sample
 /.cache
 __pycache__/
+tools/mathjax/node_modules/

@@ -855,5 +855,148 @@ class FormulaTest(unittest.TestCase):
             shutil.rmtree(cache, ignore_errors=True)
 
 
+MATHJAX_READY = (
+    shutil.which('bun') is not None
+    and os.path.isdir(os.path.join(mdconv.MATHJAX_TOOL_DIR, 'node_modules'))
+)
+
+
+class FormulaBackendTest(unittest.TestCase):
+    """--formula-engine 的后端选择策略（不依赖真实渲染器）"""
+
+    ENV_KEYS = ('MDCONV_LATEX_ENGINE', 'MDCONV_MATHJAX_RENDERER',
+                'MDCONV_FORMULA_ENGINE')
+
+    def setUp(self):
+        self._latex = mdconv.LATEX_ENGINE
+        self._mathjax = mdconv.MATHJAX_RENDERER_CMD
+        self._env = {k: os.environ.get(k) for k in self.ENV_KEYS}
+
+    def tearDown(self):
+        mdconv.LATEX_ENGINE = self._latex
+        mdconv.MATHJAX_RENDERER_CMD = self._mathjax
+        for key, value in self._env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def _fake(self, latex, mathjax, policy='auto'):
+        mdconv.LATEX_ENGINE = latex or ''
+        mdconv.MATHJAX_RENDERER_CMD = mathjax or ''
+        os.environ['MDCONV_FORMULA_ENGINE'] = policy
+
+    def test_auto_prefers_latex(self):
+        self._fake('xelatex', '/tmp/render.mjs')
+        self.assertEqual(mdconv.select_formula_backend(False), 'latex')
+        self.assertEqual(mdconv.select_formula_backend(True), 'latex')
+
+    def test_auto_falls_back_to_mathjax_without_latex(self):
+        self._fake('', '/tmp/render.mjs')
+        self.assertEqual(mdconv.select_formula_backend(False), 'mathjax')
+
+    def test_auto_keeps_cjk_formulas_raw_without_latex(self):
+        self._fake('', '/tmp/render.mjs')
+        self.assertIsNone(mdconv.select_formula_backend(True))
+
+    def test_explicit_latex_requires_engine(self):
+        self._fake('', '/tmp/render.mjs', policy='latex')
+        self.assertIsNone(mdconv.select_formula_backend(False))
+
+    def test_explicit_mathjax_requires_renderer(self):
+        self._fake('xelatex', '', policy='mathjax')
+        self.assertIsNone(mdconv.select_formula_backend(False))
+
+    def test_explicit_mathjax_allows_cjk(self):
+        self._fake('', '/tmp/render.mjs', policy='mathjax')
+        self.assertEqual(mdconv.select_formula_backend(True), 'mathjax')
+
+    def test_ensure_formula_svg_keeps_cjk_raw_without_latex(self):
+        self._fake('', '/tmp/render.mjs')
+        images = tempfile.mkdtemp(prefix='mdconv-mj-')
+        try:
+            self.assertIsNone(mdconv.ensure_formula_svg(r'\text{中文}', images))
+            self.assertEqual(os.listdir(images), [], '不应生成 MathJax 公式文件')
+        finally:
+            shutil.rmtree(images, ignore_errors=True)
+
+
+@unittest.skipUnless(MATHJAX_READY, '未安装 bun 或 tools/mathjax/node_modules')
+class MathjaxRenderTest(unittest.TestCase):
+    """MathJax + Bun 可选后端的真实渲染（CI 安装 bun 后执行）"""
+
+    ENV_KEYS = ('MDCONV_LATEX_ENGINE', 'MDCONV_MATHJAX_RENDERER',
+                'MDCONV_FORMULA_ENGINE', 'MDCONV_FORMULA_CACHE')
+
+    def setUp(self):
+        self._latex = mdconv.LATEX_ENGINE
+        self._mathjax = mdconv.MATHJAX_RENDERER_CMD
+        self._env = {k: os.environ.get(k) for k in self.ENV_KEYS}
+        # 模拟没有 LaTeX 的环境：强制 MathJax
+        mdconv.LATEX_ENGINE = ''
+        mdconv.MATHJAX_RENDERER_CMD = mdconv.MATHJAX_RENDERER
+
+    def tearDown(self):
+        mdconv.LATEX_ENGINE = self._latex
+        mdconv.MATHJAX_RENDERER_CMD = self._mathjax
+        for key, value in self._env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_mathjax_svg_is_self_contained(self):
+        """输出必须全部为路径、尺寸单位为 pt，且不残留错误标记"""
+        tmp = tempfile.mkdtemp(prefix='mdconv-mjsvg-')
+        try:
+            out = os.path.join(tmp, 'out.svg')
+            mdconv.render_mathjax_to_svg(r'\frac{a}{b}', out)
+            with open(out, encoding='utf-8') as f:
+                svg = f.read()
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertIn('<path', svg, 'SVG 未使用字形路径')
+        self.assertNotIn('<text', svg, 'SVG 含文本节点，阅读端可能缺字体')
+        self.assertNotIn('currentColor', svg)
+        self.assertNotIn('data-mjx-error', svg)
+        self.assertRegex(svg, r'width="[\d.]+pt"', '尺寸未转为 pt')
+
+    def test_undefined_command_fails(self):
+        """未定义命令应失败，由调用方保留公式原文"""
+        tmp = tempfile.mkdtemp(prefix='mdconv-mjbad-')
+        try:
+            out = os.path.join(tmp, 'bad.svg')
+            with self.assertRaises(RuntimeError):
+                mdconv.render_mathjax_to_svg(r'\notacommand{x}', out)
+            self.assertFalse(os.path.exists(out))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_build_uses_mathjax_backend(self):
+        """指定 mathjax 后端时，公式 SVG 带后端标识并写入持久缓存"""
+        docdir = tempfile.mkdtemp(prefix='mdconv-mjdoc-')
+        build = tempfile.mkdtemp(prefix='mdconv-mjbuild-')
+        cache = tempfile.mkdtemp(prefix='mdconv-mjcache-')
+        os.environ['MDCONV_FORMULA_CACHE'] = cache
+        try:
+            with open(os.path.join(docdir, 'SUMMARY.md'), 'w', encoding='utf-8') as f:
+                f.write('# Summary\n\n* [A](a.md)\n')
+            with open(os.path.join(docdir, 'a.md'), 'w', encoding='utf-8') as f:
+                f.write('公式 $E = mc^2$。\n')
+            mdconv.main(docdir, build_dir=build, make_pdf=False,
+                        make_epub=False, make_docx=False,
+                        formula_engine='mathjax')
+            images = os.listdir(os.path.join(build, 'images'))
+            self.assertTrue([n for n in images if n.startswith('formula_mathjax_')],
+                            f'未生成 MathJax 公式: {images}')
+            self.assertTrue([n for n in os.listdir(cache)
+                             if n.startswith('formula_mathjax_')],
+                            'MathJax 公式未写入持久缓存')
+        finally:
+            shutil.rmtree(docdir, ignore_errors=True)
+            shutil.rmtree(build, ignore_errors=True)
+            shutil.rmtree(cache, ignore_errors=True)
+
+
 if __name__ == '__main__':
     unittest.main()

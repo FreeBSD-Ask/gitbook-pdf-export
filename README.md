@@ -45,6 +45,7 @@ sha256sum -c SHA-256SUMS
 |`highlight.css`|代码高亮配色（BSD 命令自定义高亮），不可删除|
 |`fonts/`|霞鹜文楷 GB 版屏幕阅读版与等宽屏幕版，不可删除|
 |`requirements-dev.txt`|测试与 CI 依赖（pypdf、pillow）；本地跑测试用 `pip install -r requirements-dev.txt`|
+|`tools/mathjax/`|可选的 MathJax 4 + Bun 公式渲染脚本；执行 `bun install` 后启用|
 |`tests/`|回归测试、样本构建、veraPDF 与 EPUBCheck 校验脚本|
 |`build/`|输出目录，会自动生成：`final.pdf`、`final-ua.pdf`、`final.epub`、`final.docx`，以及 PDF 排版专用的 `pdf.html`|
 
@@ -64,7 +65,7 @@ pip install -r requirements.txt
 python mdconv.py Handbook
 ```
 
-生成 PDF 中的公式需要 xelatex（可选）：`sudo apt install texlive-xetex texlive-lang-chinese`。
+生成 PDF 中的公式需要 xelatex（可选）：`sudo apt install texlive-xetex texlive-lang-chinese`。没有 LaTeX 时可以改用 MathJax + Bun 后端，见下文“公式后端”。
 
 ### FreeBSD 15.1
 
@@ -117,7 +118,8 @@ C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 |`--no-pdf-ua`|跳过无障碍版 PDF（tagged PDF/UA-1）|
 |`--no-epub`|跳过 EPUB 生成|
 |`--no-docx`|跳过 Word 文档生成|
-|`--no-formula`|跳过 LaTeX 公式渲染|
+|`--no-formula`|跳过公式渲染|
+|`--formula-engine`|公式后端：`auto`（默认）、`latex`、`mathjax`；auto 为 LaTeX 优先，无 LaTeX 时非中文公式退回 MathJax + Bun|
 |`-j, --workers`|并行进程数，默认 CPU 核数（上限 16）|
 |`--title`|书籍标题，默认读取 start.html 的 `<title>`|
 |`--author`|作者，默认读取 start.html 的 `meta author`|
@@ -138,6 +140,26 @@ C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 - 普通图片自动包成 `<figure>` 并按章编号，图注为 `图 N：alt 文本`（编号在每个源文件内从 1 重新开始）；EPUB/DOCX 同样保留图注
 - pandoc 风格脚注 `[^1]` 与定义 `[^1]: 说明` 在 PDF、EPUB、Word 中都会呈现
 - 正文启用中文排版规则（对照 W3C [clreq](https://www.w3.org/TR/clreq)）：`line-break: strict` 严格避头尾、`text-autospace` 中西文之间自动加间距（盘古之白）、`word-break: auto-phrase` 词组级断行（渐进增强，不支持的引擎忽略）
+
+## 公式后端
+
+默认 `--formula-engine auto`：有 LaTeX 就用 LaTeX；没有 LaTeX 时，不含中文的公式自动退回 **MathJax 4 + Bun**，含中文的公式保留原文（MathJax 字体不含 CJK 字形）。
+
+启用 MathJax 后端（可完全替代 LaTeX 安装）：
+
+```sh
+# 1. 安装 Bun（https://bun.sh）
+# 2. 在仓库内装一次 JS 依赖（约 18 个包）
+cd tools/mathjax && bun install
+```
+
+之后正常构建即可；MathJax 输出与其他后端一样是自包含 SVG（字形全部转路径、尺寸转 pt），在 PDF/EPUB 中都按矢量渲染。`--formula-engine latex` 或 `mathjax` 可强制指定后端。
+
+注意：
+
+- 预编译二进制不含 `tools/mathjax`，仍需系统 LaTeX；要用 MathJax 请从源码运行，或用 `MDCONV_MATHJAX_RENDERER=/path/to/render.mjs` 指向任意一份渲染脚本。
+- 含中文的公式（如 `\text{中文}`）只能由 LaTeX 渲染；MathJax 会输出带系统字体回退的 `<text>`，跨平台不可靠，因此 auto 模式直接保留原文。
+- 缓存文件名带后端标识（`formula_mathjax_*.svg` 与 LaTeX 的 `formula_*.svg` 分开），切换后端不会误用旧结果。
 
 ## PDF 标准与校验
 
@@ -188,7 +210,7 @@ yay -S ttf-lxgw-wenkai-screen
 
 ## CI 与发布
 
-- `tests.yml`：42 项回归测试（含跨格式内容完整性、图号、脚注、EPUB 无障碍与内容模型断言）+ 构建样本后跑 veraPDF（PDF/A-4 与 PDF/UA-1）与 EPUBCheck
+- `tests.yml`：52 项回归测试（含跨格式内容完整性、图号、脚注、EPUB 无障碍与内容模型断言、MathJax 后端）+ 构建样本后跑 veraPDF（PDF/A-4 与 PDF/UA-1）与 EPUBCheck；CI 会用 `oven-sh/setup-bun` 装上 Bun 并执行 `bun install`，让 MathJax 测试真正运行
 - `build-binaries.yml`：Ubuntu x64/arm64 与 Windows x64/arm64 上用 PyInstaller 打包，FreeBSD 在 15.1 的 ZFS 镜像内构建；OpenBSD/NetBSD 做冒烟测试（缺预编译依赖时仅作参考，不阻塞发布）
 - 每个平台构建后都会在本机运行产物：`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`、EPUB/DOCX 断言 zip 容器；没有 GTK 的平台只验证 CLI、HTML、EPUB 与 DOCX
 - 推送 `[0-9]*` 形式的 tag 会触发构建，全部平台通过后自动上传二进制、`SHA-256SUMS` 与 `BUILD-INFO.txt` 到对应 Release；任一平台构建或冒烟失败则不发布

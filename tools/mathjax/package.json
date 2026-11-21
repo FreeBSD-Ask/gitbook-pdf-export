@@ -1,0 +1,9 @@
+{
+  "name": "mdconv-mathjax-renderer",
+  "private": true,
+  "type": "module",
+  "description": "MathJax 4 + Bun 的 LaTeX 公式转 SVG 渲染脚本（mdconv 可选公式后端）",
+  "dependencies": {
+    "@mathjax/src": "4.1.3"
+  }
+}
