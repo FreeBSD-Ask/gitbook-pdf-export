@@ -229,13 +229,15 @@ def find_mathjax_renderer():
     return None
 
 
-def select_formula_backend(has_cjk=False):
+def select_formula_backend(has_cjk=False, policy=None):
     """按 --formula-engine 策略选择后端，返回 latex / mathjax / None
 
     auto（默认）：LaTeX 优先；没有 LaTeX 时，不含中文的公式退回 MathJax，
     含中文的公式保留原文（MathJax 字体缺 CJK 字形）。
+    policy 缺省时读取 MDCONV_FORMULA_ENGINE，供无法依赖环境的 worker 显式传入。
     """
-    policy = os.environ.get('MDCONV_FORMULA_ENGINE') or 'auto'
+    if policy is None:
+        policy = os.environ.get('MDCONV_FORMULA_ENGINE') or 'auto'
     latex = find_latex_engine()
     if policy == 'latex':
         return 'latex' if latex else None
@@ -389,15 +391,19 @@ def render_latex_to_svg(latex_code, output_path):
                 pass
 
 
-def ensure_formula_svg(formula, images_dir):
+def ensure_formula_svg(formula, images_dir, cache_dir=None, engine_policy=None):
     """渲染单个公式为 SVG（带持久缓存），成功返回文件名，失败返回 None
 
-    缓存位于 FORMULA_CACHE_DIR（独立于 build 目录），重复构建无需重新渲染。
+    缓存位于 cache_dir（缺省为 FORMULA_CACHE_DIR），重复构建无需重新渲染。
     缓存文件名带后端标记：LaTeX 沿用历史命名，MathJax 产物单独存放，
     避免切换后端（或后装 LaTeX）后读到另一后端的结果。
+
+    cache_dir / engine_policy 由主进程显式传入：Linux 上 Python 3.14+
+    默认 forkserver，worker 的环境在首次启动时即固化，不能再依赖
+    运行过程中修改的环境变量。
     """
     has_cjk = any('\u4e00' <= c <= '\u9fff' for c in formula)
-    backend = select_formula_backend(has_cjk)
+    backend = select_formula_backend(has_cjk, engine_policy)
     if backend is None:
         if has_cjk and not find_latex_engine() and find_mathjax_renderer():
             print('  含中文的公式需要 LaTeX 引擎（MathJax 字体不含 CJK），已保留原文')
@@ -410,10 +416,9 @@ def ensure_formula_svg(formula, images_dir):
     if os.path.exists(svg_path):
         return svg_name
 
-    # 命中持久缓存则直接复用。缓存目录在调用时读取环境变量：
-    # Linux 的 fork worker 继承了 import 时的全局值，只有按调用读取
-    # 才能让 MDCONV_FORMULA_CACHE 在多进程下一致生效
-    cache_dir = os.environ.get('MDCONV_FORMULA_CACHE') or FORMULA_CACHE_DIR
+    # 命中持久缓存则直接复用
+    if cache_dir is None:
+        cache_dir = os.environ.get('MDCONV_FORMULA_CACHE') or FORMULA_CACHE_DIR
     os.makedirs(cache_dir, exist_ok=True)
     cached_path = os.path.join(cache_dir, svg_name)
     if os.path.exists(cached_path):
@@ -438,13 +443,14 @@ def ensure_formula_svg(formula, images_dir):
         return None
 
 
-def preprocess_formulas(md_text, images_dir):
+def preprocess_formulas(md_text, images_dir, cache_dir=None, engine_policy=None):
     """将 Markdown 中的 LaTeX 公式替换为 SVG 图片引用
 
     单个 Markdown 文件内的全部公式并发渲染（渲染器为子进程，线程池即可加速）。
     后端由 --formula-engine 决定：LaTeX 或 MathJax（Bun）。
+    cache_dir / engine_policy 由主进程显式传入，见 ensure_formula_svg。
     """
-    if select_formula_backend() is None:
+    if select_formula_backend(policy=engine_policy) is None:
         return md_text
 
     code_blocks = []
@@ -479,7 +485,7 @@ def preprocess_formulas(md_text, images_dir):
         print(f"  开始渲染 {len(formulas)} 个公式（含缓存复用）...")
         with ThreadPoolExecutor(max_workers=min(4, len(formulas))) as executor:
             list(executor.map(
-                lambda f: ensure_formula_svg(f, images_dir),
+                lambda f: ensure_formula_svg(f, images_dir, cache_dir, engine_policy),
                 formulas.keys()
             ))
 
@@ -487,7 +493,7 @@ def preprocess_formulas(md_text, images_dir):
         formula = match.group(1).strip()
         if not formula:
             return match.group(0)
-        svg_name = ensure_formula_svg(formula, images_dir)
+        svg_name = ensure_formula_svg(formula, images_dir, cache_dir, engine_policy)
         if svg_name is None:
             return match.group(0)
         return f'\n<img src="images/{svg_name}" alt="formula" class="formula-display">\n'
@@ -498,7 +504,7 @@ def preprocess_formulas(md_text, images_dir):
             return match.group(0)
         if '\\' not in formula and '_' not in formula and '^' not in formula:
             return match.group(0)
-        svg_name = ensure_formula_svg(formula, images_dir)
+        svg_name = ensure_formula_svg(formula, images_dir, cache_dir, engine_policy)
         if svg_name is None:
             return match.group(0)
         return f'<img src="images/{svg_name}" alt="formula" class="formula-inline">'
@@ -768,7 +774,10 @@ class CustomRenderer(mistune.HTMLRenderer):
 
 def process_single_markdown_file(args):
     """处理单个 Markdown 文件 - 用于多进程处理"""
-    file_info, docdir, images_dir, formulas_enabled = args
+    file_info, docdir, images_dir, formulas_enabled, *rest = args
+    # 缓存目录与后端策略由主进程随任务传入（forkserver 下环境变量可能过期）
+    cache_dir = rest[0] if len(rest) > 0 else None
+    engine_policy = rest[1] if len(rest) > 1 else None
 
     if file_info.startswith('rawchaptertext:'):
         title = file_info.split(':', 1)[1]
@@ -785,7 +794,8 @@ def process_single_markdown_file(args):
 
     # 预处理 LaTeX 公式（渲染为 SVG 图片并替换为 <img> 标签）
     if formulas_enabled:
-        md_content = preprocess_formulas(md_content, images_dir)
+        md_content = preprocess_formulas(md_content, images_dir,
+                                         cache_dir, engine_policy)
 
     # 创建独立的渲染器实例
     renderer = CustomRenderer(escape=False)
@@ -873,7 +883,12 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str,
     print(f"开始并行处理 {len(files)} 个 Markdown 文件...")
 
     # 准备任务
-    tasks = [(file_info, docdir, IMAGES_DIR, formulas_enabled) for file_info in files]
+    # 缓存目录与公式后端在主进程确定一次，随任务传给 worker：
+    # Linux 上 Python 3.14+ 的 forkserver 不会继承之后修改的环境变量
+    cache_dir = os.environ.get('MDCONV_FORMULA_CACHE') or FORMULA_CACHE_DIR
+    engine_policy = os.environ.get('MDCONV_FORMULA_ENGINE') or 'auto'
+    tasks = [(file_info, docdir, IMAGES_DIR, formulas_enabled,
+              cache_dir, engine_policy) for file_info in files]
 
     combined_parts = [None] * len(files)
     all_copy_tasks = []
