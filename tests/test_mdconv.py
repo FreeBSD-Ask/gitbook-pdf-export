@@ -79,7 +79,13 @@ class BuildFixture:
             f.write(
                 '# 第一节\n\n'
                 '参见[第二节](../ch2/sec2.md)。\n\n'
-                '![图一](img/pic.png)\n'
+                '![图一](img/pic.png)\n\n'
+                # 带链接的图片、冒号 id 的 SVG、错标扩展名的 JPEG、
+                # 下载不到的远程图片：EPUB 打包时都必须合规
+                '[![链接图](img/pic.png)](https://example.com)\n\n'
+                '![冒号](img/badge.svg)\n\n'
+                '![错标](img/mislabel.png)\n\n'
+                '![远程图](http://127.0.0.1:9/badge.svg)\n'
             )
 
         # 第二节（位于另一目录）：与第一节同名的标题（id 冲突）+ 不同内容的同名图片
@@ -93,6 +99,20 @@ class BuildFixture:
         # 两张同名但内容不同的图片
         make_png(os.path.join(root, 'ch1', 'img', 'pic.png'), (255, 0, 0))
         make_png(os.path.join(root, 'ch2', 'img', 'pic.png'), (0, 255, 0))
+
+        # 第三方 SVG 常见的非法 id（XML 名称不允许冒号）
+        with open(os.path.join(root, 'ch1', 'img', 'badge.svg'), 'w',
+                  encoding='utf-8') as f:
+            f.write('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">'
+                    '<rect id="layer:1" width="10" height="10" fill="#f00"/></svg>')
+
+        # 扩展名撒谎的图片：.png 里其实是 JPEG
+        try:
+            from PIL import Image
+            Image.new('RGB', (2, 2), (0, 0, 255)).save(
+                os.path.join(root, 'ch1', 'img', 'mislabel.png'), 'JPEG')
+        except ImportError:
+            pass
 
         # 封面
         make_png(os.path.join(root, 'book-logo.png'))
@@ -144,6 +164,23 @@ class MdconvTest(unittest.TestCase):
         images = os.listdir(os.path.join(self.build, 'images'))
         pics = [n for n in images if n.endswith('.png') and 'pic' in n]
         self.assertEqual(len(pics), 2, f'同名图片被覆盖，仅剩: {pics}')
+
+    def test_epub_edge_cases_are_compliant(self):
+        """链接图片/冒号 SVG id/错标扩展名/远程图片在 EPUB 中均需合规"""
+        with zipfile.ZipFile(os.path.join(self.build, 'final.epub')) as z:
+            names = z.namelist()
+            xhtml = ''.join(z.read(n).decode('utf-8') for n in names
+                            if n.endswith('.xhtml'))
+            opf = z.read('EPUB/content.opf').decode('utf-8')
+            svgs = b'\n'.join(z.read(n) for n in names
+                              if n.endswith('.svg'))
+        self.assertNotRegex(xhtml, r'<p(?:\s[^>]*)?>\s*<a[^>]*>\s*<figure')
+        self.assertNotRegex(xhtml, r'<p(?:\s[^>]*)?>\s*<figure')
+        self.assertIn('在线图片未能打包', xhtml, '远程图片缺少占位文字')
+        self.assertNotIn('127.0.0.1', xhtml, 'EPUB 残留远程资源引用')
+        self.assertIn(b'id="layer_1"', svgs, 'SVG 冒号 id 未修正')
+        self.assertNotIn(b'id="layer:1"', svgs)
+        self.assertIn('media-type="image/jpeg"', opf, '错标扩展名未按实际格式声明')
 
     @unittest.skipIf(not HAS_PYPDF, '未安装 pypdf，跳过 PDF 测试')
     def test_pdf_outline_bookmarks(self):
