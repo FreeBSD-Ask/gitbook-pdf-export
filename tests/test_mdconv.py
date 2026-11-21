@@ -542,6 +542,29 @@ class ContentIntegrityTest(unittest.TestCase):
                          f'图片编号错误: {caps}')
         self.assertEqual(figs, 3, 'figure 数量与图片不一致')
 
+    def test_figure_not_nested_in_paragraph(self):
+        """<figure> 是块级元素，不能嵌在 <p> 内（EPUBCheck RSC-005）"""
+        with zipfile.ZipFile(self._epub) as z:
+            bad = []
+            for n in [x for x in z.namelist() if x.endswith('.xhtml')]:
+                html = z.read(n).decode('utf-8')
+                if re.search(r'<p(?:\s[^>]*)?>\s*<figure', html):
+                    bad.append(n)
+        self.assertEqual(bad, [], f'<p> 内嵌 <figure>: {bad}')
+
+    def test_epub_paths_use_forward_slashes(self):
+        """EPUB 内部路径必须是正斜杠（Windows 上 os.path.join 会产出反斜杠，RSC-020）"""
+        with zipfile.ZipFile(self._epub) as z:
+            bad_names = [n for n in z.namelist() if '\\' in n]
+            bad_hrefs = []
+            for n in [x for x in z.namelist() if x.endswith('.xhtml')]:
+                html = z.read(n).decode('utf-8')
+                for href in re.findall(r'(?:href|src)="([^"]*)"', html):
+                    if '\\' in href:
+                        bad_hrefs.append(f'{n}: {href}')
+        self.assertEqual(bad_names, [], f'EPUB 条目名含反斜杠: {bad_names}')
+        self.assertEqual(bad_hrefs, [], f'EPUB 引用含反斜杠: {bad_hrefs}')
+
     def test_epub_accessibility(self):
         """EPUB 无障碍：nav 带 landmark，所有 img 均有 alt"""
         with zipfile.ZipFile(self._epub) as z:
@@ -563,6 +586,27 @@ class ContentIntegrityTest(unittest.TestCase):
             main_css = z.read('EPUB/css/main.css').decode('utf-8')
         self.assertIn('line-break: strict', main_css, '缺少避头尾规则')
         self.assertIn('text-autospace', main_css, '缺少中西文间距规则')
+
+
+class FigureBlockTest(unittest.TestCase):
+    """图片块规范化：块级 figure 与段落内容模型互不嵌套"""
+
+    def test_standalone_figure_unwrapped(self):
+        html = ('<p><figure class="figure-block"><img src="a.png"/>'
+                '<figcaption>图 1：a</figcaption></figure></p>')
+        out = mdconv.normalize_figure_blocks(html)
+        self.assertNotRegex(out, r'<p(?:\s[^>]*)?>\s*<figure')
+        self.assertIn('<figure', out)
+        self.assertIn('图 1：a', out)
+
+    def test_inline_image_falls_back_to_img(self):
+        html = ('<p>前文<figure class="figure-block"><img src="a.png"/>'
+                '<figcaption>图 1：a</figcaption></figure>后文</p>')
+        out = mdconv.normalize_figure_blocks(html)
+        self.assertNotIn('<figure', out)
+        self.assertIn('<img src="a.png"/>', out)
+        self.assertIn('前文', out)
+        self.assertIn('后文', out)
 
 
 class PaginationTest(unittest.TestCase):

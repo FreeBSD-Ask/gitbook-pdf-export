@@ -693,6 +693,31 @@ def dedupe_heading_ids(html_text: str) -> str:
     return str(soup)
 
 
+def normalize_figure_blocks(html_text: str) -> str:
+    """修正 <figure> 与 <p> 的嵌套关系
+
+    mistune 会把独占一段的图片包进 <p>，但 <figure> 是块级元素，嵌在 <p>
+    内违反 HTML 内容模型（EPUBCheck 报 RSC-005，浏览器也会提前闭合段落）。
+    独占一段的图片脱去外层 <p>；夹在文字中间的图片退回普通 <img>——行内
+    图片本就不应编号成图注。
+    """
+    soup = BeautifulSoup(html_text, 'html.parser')
+    for fig in soup.find_all('figure'):
+        parent = fig.parent
+        if parent is None or parent.name != 'p':
+            continue
+        siblings = [c for c in parent.contents
+                    if not (isinstance(c, str) and not c.strip())]
+        if len(siblings) == 1:
+            fig.extract()
+            parent.replace_with(fig)
+        else:
+            img = fig.find('img')
+            if img is not None:
+                fig.replace_with(img)
+    return str(soup)
+
+
 def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str,
                                       max_workers=None, formulas_enabled=True):
     """合并多个 Markdown 为单个 HTML - 多进程版本"""
@@ -758,6 +783,8 @@ def combine_markdown_to_html_parallel(docdir: str, files: list, out_html: str,
 
     # 全局去重 id，消除跨文件同名标题的锚点冲突
     combined = dedupe_heading_ids(combined)
+    # 修正图片块：<figure> 不能嵌在 <p> 内（EPUBCheck RSC-005）
+    combined = normalize_figure_blocks(combined)
 
     with open(out_html, 'w', encoding='utf-8') as wf:
         wf.write(combined)
@@ -822,7 +849,9 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
         css_content = strip_epub_css('\n\n'.join(css_rules))
         css_item = epub.EpubItem(
             uid='main-css',
-            file_name=os.path.join(CSS_DIR, 'main.css'),
+            # EPUB 内部路径必须用正斜杠：os.path.join 在 Windows 上会产出
+            # css\main.css，EPUBCheck 判为非法 URL（RSC-020）
+            file_name=f'{CSS_DIR}/main.css',
             media_type='text/css',
             content=css_content.encode('utf-8')
         )
