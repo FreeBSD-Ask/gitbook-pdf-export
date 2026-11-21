@@ -410,9 +410,12 @@ def ensure_formula_svg(formula, images_dir):
     if os.path.exists(svg_path):
         return svg_name
 
-    # 命中持久缓存则直接复用
-    os.makedirs(FORMULA_CACHE_DIR, exist_ok=True)
-    cached_path = os.path.join(FORMULA_CACHE_DIR, svg_name)
+    # 命中持久缓存则直接复用。缓存目录在调用时读取环境变量：
+    # Linux 的 fork worker 继承了 import 时的全局值，只有按调用读取
+    # 才能让 MDCONV_FORMULA_CACHE 在多进程下一致生效
+    cache_dir = os.environ.get('MDCONV_FORMULA_CACHE') or FORMULA_CACHE_DIR
+    os.makedirs(cache_dir, exist_ok=True)
+    cached_path = os.path.join(cache_dir, svg_name)
     if os.path.exists(cached_path):
         try:
             shutil.copy(cached_path, svg_path)
