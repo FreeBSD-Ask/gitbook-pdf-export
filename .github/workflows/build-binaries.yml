@@ -297,7 +297,16 @@ jobs:
           echo "$files"
           test -n "$files"
           # 构建指纹与校验和：资产可复现、可离线验证
-          (cd dist/release && sha256sum $(basename -- *) > ../SHA-256SUMS)
+          # artifact 下载后合并到 dist/ 根目录，按文件名计算即可
+          (cd dist && find . -maxdepth 1 -type f -name 'mdconv*' -printf '%f\n' \
+             | sort | xargs -r sha256sum > SHA-256SUMS)
+          # 校验和必须覆盖全部上传的二进制，防止漏算
+          file_count=$(find dist -type f -name 'mdconv*' | wc -l)
+          sum_count=$(wc -l < dist/SHA-256SUMS)
+          if [ "$file_count" -ne "$sum_count" ]; then
+            echo "校验和条数 $sum_count 与二进制数 $file_count 不一致"
+            exit 1
+          fi
           printf 'tag=%s\ncommit=%s\nbuilt=%s\n' \
             "$TAG" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD-INFO.txt
           files="$files dist/SHA-256SUMS dist/BUILD-INFO.txt"
