@@ -608,6 +608,62 @@ class FigureBlockTest(unittest.TestCase):
         self.assertIn('前文', out)
         self.assertIn('后文', out)
 
+    def test_linked_image_unwraps_paragraph(self):
+        """[![alt](img)](url) 生成 <p><a><figure>，需把 figure 提出段落"""
+        html = ('<p><a href="https://example.com">'
+                '<figure class="figure-block"><img src="a.png" alt="a"/>'
+                '<figcaption>图 1：a</figcaption></figure></a></p>')
+        out = mdconv.normalize_figure_blocks(html)
+        self.assertNotRegex(out, r'<p(?:\s[^>]*)?>\s*<a[^>]*>\s*<figure')
+        self.assertRegex(out, r'<figure[^>]*>\s*<a href="https://example\.com">'
+                               r'<img[^>]*/></a>')
+        self.assertIn('<figcaption>图 1：a</figcaption>', out)
+
+
+class EpubSanitizeTest(unittest.TestCase):
+    """EPUB 打包期的资源清理：媒体类型、SVG id、远程资源"""
+
+    def test_media_type_sniffed_from_bytes(self):
+        self.assertEqual(mdconv.sniff_image_media_type(b'\x89PNG\r\n\x1a\n' + b'0' * 8),
+                         'image/png')
+        self.assertEqual(mdconv.sniff_image_media_type(b'\xff\xd8\xff\xe0' + b'0' * 8),
+                         'image/jpeg')
+        self.assertEqual(mdconv.sniff_image_media_type(b'GIF89a' + b'0' * 8),
+                         'image/gif')
+        self.assertEqual(mdconv.sniff_image_media_type(b'RIFF0000WEBP'),
+                         'image/webp')
+        self.assertEqual(mdconv.sniff_image_media_type(b'<svg xmlns="x"></svg>'),
+                         'image/svg+xml')
+
+    def test_svg_ids_with_colons_renamed(self):
+        svg = (b'<svg xmlns="http://www.w3.org/2000/svg">'
+               b'<defs><linearGradient id="paint0_linear_428:227"/>'
+               b'<rect fill="url(#paint0_linear_428:227)"/></defs></svg>')
+        out = mdconv.sanitize_svg_ids(svg)
+        self.assertNotIn(b'428:227', out)
+        self.assertIn(b'id="paint0_linear_428_227"', out)
+        self.assertIn(b'url(#paint0_linear_428_227)', out)
+
+    def test_remote_images_removed_from_epub(self):
+        html = ('<p><img alt="徽章" src="https://example.com/badge.svg"/></p>'
+                '<picture><source srcset="https://example.com/chart.svg 1x"/>'
+                '<img alt="图" src="images/chart.svg"/></picture>')
+        out = mdconv.sanitize_epub_chapter_html(html)
+        self.assertNotIn('https://example.com', out)
+        self.assertIn('［徽章：在线图片未能打包］', out)
+        self.assertNotIn('<source', out)
+        self.assertIn('src="images/chart.svg"', out)
+
+    def test_image_rename_and_source_type(self):
+        """扩展名改名的图片需同步改写引用，<source> 补 type"""
+        html = ('<picture><source media="(prefers-color-scheme: dark)" '
+                'srcset="images/x.png"/>'
+                '<img alt="x" src="images/x.png"/></picture>')
+        out = mdconv.sanitize_epub_chapter_html(html, {'x.png': 'x.jpg'})
+        self.assertIn('src="images/x.jpg"', out)
+        self.assertIn('srcset="images/x.jpg"', out)
+        self.assertIn('type="image/jpeg"', out)
+
 
 class PaginationTest(unittest.TestCase):
     """分页回归测试：封面/目录与章标题各自的分页规则不应叠加出空白页"""

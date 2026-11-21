@@ -521,11 +521,19 @@ def convert_local_paths_worker(args):
                 path_part = unquote(urlparse(url).path or '')
                 base_name = os.path.basename(path_part)
                 name, ext = os.path.splitext(base_name)
-                if not name:
-                    name = hashlib.md5(url.encode('utf-8')).hexdigest()
-                # 如果扩展名缺失，暂时用 ''，下载时根据响应 Content-Type 修正
-                new_name = (hashlib.md5(url.encode('utf-8')).hexdigest() + ext) if not re.match(r'^[A-Za-z0-9_\-]+$', name) else (name + ext)
+                url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()
+                if not name or not re.match(r'^[A-Za-z0-9_\-]+$', name):
+                    name = url_hash
+                # 文件名带 URL 哈希前缀：同名路径（如 /chart?theme=dark 与
+                # ?theme=light）不会互相覆盖；无扩展名的地址在下载前无法
+                # 确定扩展，下载后按前缀找回
+                prefix = url_hash[:12] + '_'
+                new_name = f'{prefix}{name}{ext}'
                 dst = os.path.join(images_dir, new_name)
+                if not ext:
+                    for existing in os.listdir(images_dir):
+                        if existing.startswith(prefix):
+                            return f'src="images/{existing}"'
                 # 如果文件已存在就不重复下载
                 if not os.path.exists(dst):
                     downloaded_path, err = download_remote_image(url, dst)
@@ -578,10 +586,27 @@ def convert_local_paths_worker(args):
 
         return original
 
-    # 处理所有匹配（先 src，再 href）
+    # 处理所有匹配（先 src，再 href，最后 srcset 候选）
     # 注意：用 callable 保证 match 对象传入
     html_content = re.sub(r'src="([^"]+)"', process_src_match, html_content)
     html_content = re.sub(r'href="([^"]+)"', process_src_match, html_content)
+
+    # <picture><source srcset="..."> 的响应式图片同样需要本地化，
+    # 否则 EPUB 里会留下远程资源引用（EPUBCheck RSC-006）
+    def process_srcset_match(match):
+        candidates = []
+        for candidate in match.group(1).split(','):
+            candidate = candidate.strip()
+            if not candidate:
+                continue
+            bits = candidate.split(None, 1)
+            replaced = process_src_match(
+                re.match(r'src="([^"]+)"', f'src="{bits[0]}"'))
+            url = replaced[5:-1] if replaced.startswith('src="') else bits[0]
+            candidates.append(url + ((' ' + bits[1]) if len(bits) > 1 else ''))
+        return f'srcset="{", ".join(candidates)}"'
+
+    html_content = re.sub(r'srcset="([^"]+)"', process_srcset_match, html_content)
 
     return html_content, copy_tasks
 
@@ -698,23 +723,47 @@ def normalize_figure_blocks(html_text: str) -> str:
 
     mistune 会把独占一段的图片包进 <p>，但 <figure> 是块级元素，嵌在 <p>
     内违反 HTML 内容模型（EPUBCheck 报 RSC-005，浏览器也会提前闭合段落）。
-    独占一段的图片脱去外层 <p>；夹在文字中间的图片退回普通 <img>——行内
-    图片本就不应编号成图注。
+    独占一段的图片脱去外层 <p>；带链接的图片（``[![alt](img)](url)``）把
+    <a> 收紧到图片本身、图注留在链接外；夹在文字中间的图片退回普通
+    <img>——行内图片本就不应编号成图注。
     """
     soup = BeautifulSoup(html_text, 'html.parser')
-    for fig in soup.find_all('figure'):
-        parent = fig.parent
-        if parent is None or parent.name != 'p':
+
+    def meaningful(nodes):
+        return [c for c in nodes
+                if not (isinstance(c, str) and not c.strip())]
+
+    for p in soup.find_all('p'):
+        figs = p.find_all('figure')
+        if not figs:
             continue
-        siblings = [c for c in parent.contents
-                    if not (isinstance(c, str) and not c.strip())]
-        if len(siblings) == 1:
+        nodes = meaningful(p.contents)
+        if len(nodes) == 1 and getattr(nodes[0], 'name', None) == 'figure':
+            fig = nodes[0]
             fig.extract()
-            parent.replace_with(fig)
-        else:
+            p.replace_with(fig)
+            continue
+        if (len(nodes) == 1 and getattr(nodes[0], 'name', None) == 'a'
+                and len(meaningful(nodes[0].contents)) == 1
+                and len(figs) == 1):
+            # [![alt](img)](url)：<p><a><figure>…</figure></a></p>
+            link = nodes[0]
+            fig = figs[0]
+            img = fig.find('img')
+            if img is not None:
+                img.extract()
+                link.clear()
+                link.append(img)
+                fig.insert(0, link)
+                fig.extract()
+                p.replace_with(fig)
+                continue
+        for fig in figs:
             img = fig.find('img')
             if img is not None:
                 fig.replace_with(img)
+            else:
+                fig.decompose()
     return str(soup)
 
 
@@ -805,6 +854,112 @@ def strip_epub_css(css: str) -> str:
     return css
 
 
+def sniff_image_media_type(data: bytes):
+    """按文件头判断图片的真实媒体类型
+
+    扩展名可能撒谎（例如 png 后缀里其实是 JPEG），此时 OPF 里按扩展名
+    写 media-type 会被 EPUBCheck 判为 OPF-029。
+    """
+    if data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png'
+    if data.startswith(b'\xff\xd8\xff'):
+        return 'image/jpeg'
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return 'image/gif'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'image/webp'
+    head = data[:512].lstrip().lower()
+    if head.startswith(b'<?xml') or head.startswith(b'<svg') or b'<svg' in head:
+        return 'image/svg+xml'
+    return None
+
+
+def sanitize_svg_ids(data: bytes) -> bytes:
+    """修正 SVG 中不合法的 id（如 "paint0_linear_428:227"）
+
+    XML 的 id 不允许冒号，绘图工具常把图层号写进 id，EPUBCheck 会报
+    RSC-005。改名时同步更新 url(#id) 与 href="#id" 引用，图形本身不变。
+    """
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError:
+        return data
+    renaming = {}
+    for old in set(re.findall(r'\bid="([^"]+)"', text)):
+        if re.match(r'^[A-Za-z_][\w.\-]*$', old):
+            continue
+        new = re.sub(r'[^\w.\-]', '_', old)
+        if not re.match(r'^[A-Za-z_]', new):
+            new = '_' + new
+        renaming[old] = new
+    if not renaming:
+        return data
+    for old, new in renaming.items():
+        text = text.replace(f'id="{old}"', f'id="{new}"')
+        text = text.replace(f'url(#{old})', f'url(#{new})')
+        text = text.replace(f'href="#{old}"', f'href="#{new}"')
+    return text.encode('utf-8')
+
+
+def sanitize_epub_chapter_html(html_text: str, image_renames=None) -> str:
+    """移除 EPUB 内不允许的远程资源引用，并修正图片引用
+
+    EPUB 要求资源全部位于容器内（EPUBCheck RSC-006）。下载失败的远程
+    图片若原样保留会破坏合规性：指向远程的 <source> 直接移除（<picture>
+    回退到 <img>），仍指向远程的 <img> 换成文字占位，读者能看出缺图而
+    不是以为排版出错。
+
+    image_renames 为 {原文件名: 新文件名}，用于扩展名与实际格式不符的
+    图片（打包时改名为正确扩展名，避免 PKG-022）；<source> 缺 type 时
+    按扩展名补上（避免 OPF-013）。
+    """
+    if image_renames:
+        for old, new in image_renames.items():
+            html_text = html_text.replace(f'src="images/{old}"',
+                                          f'src="images/{new}"')
+            html_text = html_text.replace(f'srcset="images/{old}"',
+                                          f'srcset="images/{new}"')
+
+    html_text = re.sub(
+        r'<source\b[^>]*\bsrcset="\s*(?:https?:)?//[^"]*"[^>]*/?>',
+        '', html_text)
+
+    mime_by_ext = {'png': 'image/png', 'jpg': 'image/jpeg',
+                   'jpeg': 'image/jpeg', 'gif': 'image/gif',
+                   'webp': 'image/webp', 'svg': 'image/svg+xml'}
+
+    def add_source_type(match):
+        tag = match.group(0)
+        if re.search(r'\btype="[^"]+"', tag):
+            return tag
+        srcset = re.search(r'\bsrcset="([^"]+)"', tag)
+        if not srcset:
+            return tag
+        first = html_unescape(srcset.group(1)).split(',')[0].split()
+        if not first:
+            return tag
+        ext = os.path.splitext(urlparse(first[0]).path)[1].lower().lstrip('.')
+        mime = mime_by_ext.get(ext)
+        if not mime:
+            return tag
+        return f'<source type="{mime}"' + tag[len('<source'):]
+
+    html_text = re.sub(r'<source\b[^>]*>', add_source_type, html_text)
+
+    def repl(match):
+        tag = match.group(0)
+        src = re.search(r'\bsrc="([^"]*)"', tag)
+        if not src:
+            return tag
+        if not re.match(r'^(?:https?:)?//', html_unescape(src.group(1))):
+            return tag
+        alt = re.search(r'\balt="([^"]*)"', tag)
+        label = html_unescape(alt.group(1)) if alt else '图片'
+        return f'<span class="remote-image">［{label}：在线图片未能打包］</span>'
+
+    return re.sub(r'<img\b[^>]*>', repl, html_text)
+
+
 def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: str,
                                 title='My Book', author=None, language='zh-CN'):
     """使用 EbookLib 从 HTML 生成 EPUB，包含 start.html 的内嵌样式与 CSS
@@ -877,6 +1032,12 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
     # 添加图片资源
     images_dir = os.path.join(os.path.dirname(html_file), 'images')
     cover_img_item = None
+    # 扩展名与实际格式不符的图片在 EPUB 内改名（PKG-022），并记录映射
+    # 以便同步改写章节里的 src/srcset
+    ext_by_type = {'image/png': '.png', 'image/jpeg': '.jpg',
+                   'image/gif': '.gif', 'image/webp': '.webp',
+                   'image/svg+xml': '.svg'}
+    image_renames = {}
     if os.path.exists(images_dir):
         for img_name in os.listdir(images_dir):
             img_path = os.path.join(images_dir, img_name)
@@ -894,11 +1055,27 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
                 media_type = 'application/octet-stream'
             with open(img_path, 'rb') as img_file:
                 img_content = img_file.read()
+            # 以文件头为准校正媒体类型（扩展名与实际格式可能不符）
+            sniffed = sniff_image_media_type(img_content)
+            if sniffed:
+                media_type = sniffed
+            if media_type == 'image/svg+xml':
+                # 第三方 SVG 的 id 可能含冒号等非法字符，仅修 EPUB 副本
+                img_content = sanitize_svg_ids(img_content)
+            epub_name = img_name
+            base, cur_ext = os.path.splitext(img_name)
+            want_ext = ext_by_type.get(media_type)
+            if want_ext and cur_ext.lower() != want_ext:
+                epub_name = base + want_ext
+                if os.path.exists(os.path.join(images_dir, epub_name)):
+                    suffix = hashlib.md5(img_name.encode('utf-8')).hexdigest()[:6]
+                    epub_name = f'{base}-{suffix}{want_ext}'
+                image_renames[img_name] = epub_name
             # EPUB 的 id 需符合 NCName，使用 md5 生成安全 uid
             img_uid = 'img-' + hashlib.md5(img_name.encode('utf-8')).hexdigest()[:12]
             img_item = epub.EpubItem(
                 uid=img_uid,
-                file_name=f'images/{img_name}',
+                file_name=f'images/{epub_name}',
                 media_type=media_type,
                 content=img_content
             )
@@ -977,7 +1154,8 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
                     dest = id_map.get(target)
                     if dest and dest != chap.file_name:
                         a['href'] = f'{dest}#{target}'
-        chap.content = ''.join(str(n) for n in content_nodes)
+        chap.content = sanitize_epub_chapter_html(
+            ''.join(str(n) for n in content_nodes), image_renames)
         for css in css_items:
             chap.add_link(href=css.file_name, rel='stylesheet', type='text/css')
         book.add_item(chap)
@@ -987,7 +1165,8 @@ def generate_epub_with_ebooklib(html_file: str, start_html: str, output_epub: st
     if cover_img_item is not None:
         book.add_metadata(None, 'meta', '', others={'name': 'cover', 'content': cover_img_item.id})
         cover_chapter = epub.EpubHtml(title='Cover', file_name='cover.xhtml', lang=language)
-        cover_chapter.content = '<div class="cover"><img src="images/book-logo.png" alt="Cover"/></div>'
+        cover_chapter.content = (f'<div class="cover"><img src="{cover_img_item.file_name}"'
+                                 ' alt="Cover"/></div>')
         for css in css_items:
             cover_chapter.add_link(href=css.file_name, rel='stylesheet', type='text/css')
         book.add_item(cover_chapter)

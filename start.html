@@ -414,6 +414,16 @@
       margin-top: 0.5em;
     }
 
+    /* 远程图片未能随书打包时的文字占位（EPUB 不允许远程资源） */
+    .remote-image {
+      display: inline-block;
+      padding: 0.2em 0.6em;
+      color: #A29098;
+      border: 1px dashed #E5CFD8;
+      border-radius: 3px;
+      font-size: 12.5px;
+    }
+
     /* 脚注（pandoc 风格 [^1]）：引用为上标，内容集中到文末 */
     section.footnotes {
       border-top: 1px solid #F2E9ED;
