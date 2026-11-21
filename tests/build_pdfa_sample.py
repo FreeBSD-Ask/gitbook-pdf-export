@@ -29,7 +29,7 @@ def main():
     try:
         BuildFixture(docdir)
         mdconv.main(docdir, build_dir=build_dir, make_pdf=True,
-                    make_epub=True, make_docx=False,
+                    make_epub=True, make_docx=False, make_pdf_ua=True,
                     formulas_enabled=False, title='PDF/A-4U sample')
     finally:
         shutil.rmtree(docdir, ignore_errors=True)

@@ -2,7 +2,7 @@
 
 作者为：[safreya](https://github.com/safreya)
 
-GitBook 通用 PDF/EPUB/Word 导出工具。支持代码高亮、LaTeX 公式、PDF 目录页与书签、自动图号、脚注，并额外产出无障碍（PDF/UA）版本。
+GitBook 通用 PDF/EPUB/Word 导出工具。支持代码高亮、LaTeX 公式、PDF 目录页与书签、自动图号、脚注，并可按需产出无障碍（PDF/UA）版本。
 
 **本项目基于 Python 3、mistune、EbookLib 及 WeasyPrint。CSS 样式模仿 GitBook PDF，并按 FreeBSD 中文社区文档站的 VitePress 主题调整了配色。**
 
@@ -47,7 +47,7 @@ sha256sum -c SHA-256SUMS
 |`requirements-dev.txt`|测试与 CI 依赖（pypdf、pillow）；本地跑测试用 `pip install -r requirements-dev.txt`|
 |`tools/mathjax/`|可选的 MathJax 4 + Bun 公式渲染脚本；执行 `bun install` 后启用|
 |`tests/`|回归测试、样本构建、veraPDF 与 EPUBCheck 校验脚本|
-|`build/`|输出目录，会自动生成：`final.pdf`、`final-ua.pdf`、`final.epub`、`final.docx`，以及 PDF 排版专用的 `pdf.html`|
+|`build/`|输出目录，会自动生成：`final.pdf`、`final.epub`、`final.docx`，以及 PDF 排版专用的 `pdf.html`；无障碍版 `final-ua.pdf` 仅在传入 `--pdf-ua` 时生成|
 
 ## 从源码使用
 
@@ -115,7 +115,7 @@ C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 |`docdir`|文档根目录（含 SUMMARY.md）|
 |`-o, --output`|输出目录，默认 `build`|
 |`--no-pdf`|跳过 PDF 生成（同时跳过 PDF/UA 版本）|
-|`--no-pdf-ua`|跳过无障碍版 PDF（tagged PDF/UA-1）|
+|`--pdf-ua`|额外生成无障碍版 PDF（tagged PDF/UA-1），默认不生成|
 |`--no-epub`|跳过 EPUB 生成|
 |`--no-docx`|跳过 Word 文档生成|
 |`--no-formula`|跳过公式渲染|
@@ -163,12 +163,12 @@ cd tools/mathjax && bun install
 
 ## PDF 标准与校验
 
-默认产出两份 PDF：
+默认只产出归档版 PDF；无障碍版需显式启用：
 
 | 产物 | 标准 | 用途 |
 |:---|:---|:---|
-| `final.pdf` | **PDF/A-4**（ISO 19005-4:2020，PDF 2.0） | 归档、长期保存 |
-| `final-ua.pdf` | **PDF/UA-1**（ISO 14289-1:2014，PDF 1.7 + 结构树） | 无障碍阅读（读屏器可按结构树朗读） |
+| `final.pdf` | **PDF/A-4**（ISO 19005-4:2020，PDF 2.0） | 归档、长期保存（默认生成） |
+| `final-ua.pdf` | **PDF/UA-1**（ISO 14289-1:2014，PDF 1.7 + 结构树） | 无障碍阅读（读屏器可按结构树朗读）；加 `--pdf-ua` 才生成 |
 
 `final.pdf` 声明为 PDF/A-4 基础级：XMP 含 `pdfaid:part="4"` 与 `pdfaid:rev="2020"`，基础级不带 `pdfaid:conformance`（该属性只属于 4e/4f）。WeasyPrint 70 与标准之间还有两处差异，mdconv 在渲染阶段补齐：部分 SVG（如 shields.io 徽章）会让上游写出 NaN 坐标，序列化为未定义操作符 `nan`（6.2.2 禁止），现折算为 0；位图的 `Interpolate` 上游默认写 true（6.2.7.1 要求 false），现统一关闭——该标志只影响阅读器缩放时的平滑方式，不改动图像像素数据。
 

@@ -1704,7 +1704,7 @@ def absolutize_pdf_assets(html_text: str) -> str:
 def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
          title=None, author=None, language='zh-CN',
          make_pdf=True, make_epub=True, make_docx=True, formulas_enabled=True,
-         bookmark_depth=DEFAULT_BOOKMARK_DEPTH, make_pdf_ua=True,
+         bookmark_depth=DEFAULT_BOOKMARK_DEPTH, make_pdf_ua=False,
          formula_engine='auto'):
     # 公式缓存目录通过环境变量传递给多进程 worker（不覆盖调用方的预先设置）
     os.environ.setdefault('MDCONV_FORMULA_CACHE', FORMULA_CACHE_DIR)
@@ -1919,13 +1919,13 @@ if __name__ == '__main__':
                         choices=range(1, 7), metavar='{1-6}',
                         help='PDF 书签与目录的标题深度，按 Markdown 标题级别计'
                              '（默认 2，即到二级标题 ##）')
-    parser.add_argument('--no-pdf-ua', action='store_true',
-                        help='跳过无障碍版 PDF（tagged PDF/UA-1）的生成')
+    parser.add_argument('--pdf-ua', action='store_true',
+                        help='额外生成无障碍版 PDF（tagged PDF/UA-1，默认不生成）')
     args = parser.parse_args()
     main(args.docdir, build_dir=args.output, max_workers=args.workers,
          title=args.title, author=args.author, language=args.language,
          make_pdf=not args.no_pdf, make_epub=not args.no_epub,
          make_docx=not args.no_docx, formulas_enabled=not args.no_formula,
          bookmark_depth=args.bookmark_depth,
-         make_pdf_ua=not args.no_pdf_ua,
+         make_pdf_ua=args.pdf_ua,
          formula_engine=args.formula_engine)

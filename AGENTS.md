@@ -19,7 +19,7 @@
 - **Styling**: `start.html` contains all CSS (including `.formula-display` / `.formula-inline` for rendered formulas, heading `bookmark-level` rules, and the named `@page cover` used to hide the cover page number); `absolutize_pdf_assets()` rewrites its `../fonts/` and `../highlight.css` URLs to `file://` in `pdf.html` so the bundled fonts resolve even when `-o` points outside the repository
 - **Multi-process**: `ProcessPoolExecutor` is used for Markdown→HTML, path conversion, and image copying
 - **PDF/A-4 output**: `pdf_version="2.0"` + `pdf_variant="pdf/a-4u"`; `_patch_pdfa4_output()` wraps WeasyPrint internals to close four ISO 19005-4 gaps (drop `pdfaid:conformance` for base level, add `pdfaid:rev="2020"`, sanitize NaN coordinates in `pydyf._to_bytes`, force `Interpolate` false)
-- **PDF/UA-1 output**: a second render with `pdf_version="1.7"` + `pdf_variant="pdf/ua-1"` writes `final-ua.pdf` (tagged, `/StructTreeRoot`, `/Lang`); PDF/A variants carry no tags, so the two files are rendered separately. `--no-pdf-ua` skips it
+- **PDF/UA-1 output**: a second render with `pdf_version="1.7"` + `pdf_variant="pdf/ua-1"` writes `final-ua.pdf` (tagged, `/StructTreeRoot`, `/Lang`); PDF/A variants carry no tags, so the two files are rendered separately. It is **opt-in**: `make_pdf_ua` defaults to False and `--pdf-ua` enables it
 - **Figures and footnotes**: `CustomRenderer.image()` wraps images in `<figure>` with per-file numbering (`图 N：alt`); mistune's `footnotes` plugin handles `[^1]` references
 - **EPUB styling**: `strip_epub_css()` removes `@page` / `bookmark-*` / `page:` rules before packaging `css/main.css` — readers cannot parse paged media (EPUBCheck CSS-008)
 

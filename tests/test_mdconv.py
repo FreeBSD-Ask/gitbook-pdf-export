@@ -132,7 +132,7 @@ class MdconvTest(unittest.TestCase):
         BuildFixture(cls.docdir)
         mdconv.main(cls.docdir, build_dir=cls.build, make_pdf=HAS_PYPDF,
                     make_epub=True, formulas_enabled=False,
-                    title='测试书籍')
+                    make_pdf_ua=True, title='测试书籍')
 
     @classmethod
     def tearDownClass(cls):
@@ -322,6 +322,13 @@ class TocPageTest(unittest.TestCase):
         self._build_doc(en_pdf=False)
         self.assertNotIn('<div class="toc-page"', self._read('final.html'))
         self.assertIn('<div class="toc-page"', self._read('pdf.html'))
+
+    def test_pdf_ua_not_generated_by_default(self):
+        """无障碍版 PDF 改为按需启用：默认构建只产出 final.pdf"""
+        self._build_doc()
+        self.assertTrue(os.path.exists(os.path.join(self.build, 'final.pdf')))
+        self.assertFalse(os.path.exists(os.path.join(self.build, 'final-ua.pdf')),
+                         '默认不应生成 final-ua.pdf')
 
     @unittest.skipIf(not HAS_PYPDF, '未安装 pypdf，跳过 PDF 测试')
     def test_toc_page_numbers_start_at_body(self):
