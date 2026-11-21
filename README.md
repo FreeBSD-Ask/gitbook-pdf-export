@@ -69,7 +69,7 @@ python mdconv.py Handbook
 
 ### FreeBSD 15.1
 
-FreeBSD 15.1 的 pkg 仓库只为默认的 Python 3.12 构建第三方端口——源里有 `python315` 解释器，但没有 `py315-weasyprint`、`py315-pyinstaller` 等包，因此依赖装 py312 系列：
+FreeBSD 15.1 的 pkg 仓库只为默认的 Python 3.12 构建 Port——源里有 `python315` 解释器，但没有 `py315-weasyprint`、`py315-pyinstaller` 等包，因此依赖装 py312 系列：
 
 ```sh
 pkg install py312-pip py312-mistune py312-pygments py312-beautifulsoup4 \
