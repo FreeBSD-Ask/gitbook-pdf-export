@@ -156,6 +156,11 @@
       text-align: justify;
       orphans: 3;
       widows: 3;
+      /* 中文排版（对照 W3C clreq）：严格避头尾；中西文之间自动加约
+         1/4em 间距（盘古之白）；词组级断行是渐进增强，不支持的引擎忽略 */
+      line-break: strict;
+      text-autospace: normal;
+      word-break: auto-phrase;
     }
 
     /* 黑暗模式支持（EPUB 阅读器）
@@ -388,6 +393,44 @@
       max-width: 70%;
       display: block;
       margin: 1.4em auto;
+    }
+
+    /* 图片编号说明（mdconv 自动包装 figure 并按章编号，图 N：alt） */
+    figure.figure-block {
+      margin: 1.4em auto;
+      text-align: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    figure.figure-block img {
+      margin: 0 auto;
+    }
+
+    figcaption {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #A29098;
+      margin-top: 0.5em;
+    }
+
+    /* 脚注（pandoc 风格 [^1]）：引用为上标，内容集中到文末 */
+    section.footnotes {
+      border-top: 1px solid #F2E9ED;
+      margin-top: 1.5em;
+      padding-top: 0.5em;
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: #523C44;
+    }
+
+    section.footnotes ol {
+      padding-left: 1.4em;
+    }
+
+    sup.footnote-ref a {
+      text-decoration: none;
+      color: #D60060;
     }
 
     /* 公式图片样式（SVG 矢量图） */

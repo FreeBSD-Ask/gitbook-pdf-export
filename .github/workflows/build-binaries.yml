@@ -296,6 +296,11 @@ jobs:
           files=$(find dist -type f -name 'mdconv*' | sort)
           echo "$files"
           test -n "$files"
+          # 构建指纹与校验和：资产可复现、可离线验证
+          (cd dist/release && sha256sum $(basename -- *) > ../SHA-256SUMS)
+          printf 'tag=%s\ncommit=%s\nbuilt=%s\n' \
+            "$TAG" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD-INFO.txt
+          files="$files dist/SHA-256SUMS dist/BUILD-INFO.txt"
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" $files --clobber -R "$GITHUB_REPOSITORY"
           else

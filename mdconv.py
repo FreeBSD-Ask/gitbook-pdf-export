@@ -45,6 +45,8 @@ FINAL_HTML = 'final.html'
 # 供 PDF 排版使用的 HTML（含封面页与目录页，EPUB/Word 不读它）
 PDF_HTML = 'pdf.html'
 FINAL_PDF = 'final.pdf'
+# 无障碍版本：tagged PDF/UA-1（与 PDF/A-4 分别渲染）
+FINAL_PDF_UA = 'final-ua.pdf'
 FINAL_EPUB = 'final.epub'
 FINAL_DOCX = 'final.docx'
 CSS_DIR = 'css'
@@ -586,6 +588,26 @@ def convert_local_paths_worker(args):
 
 class CustomRenderer(mistune.HTMLRenderer):
     """自定义 Markdown 渲染器"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 图表编号按章（即按文件）归零：每个文件创建独立的渲染器实例
+        self._fig_no = 0
+
+    def image(self, text, url, title=None):
+        # 公式图片由 preprocess_formulas 阶段直接生成字符串，不经此处；
+        # 无 alt 的装饰图保持原样。普通图片包成 <figure> 并按章编号，
+        # figcaption 取图片的 alt 文本（图 N：alt），供交叉引用与打印
+        if not text or text.startswith('formula'):
+            return super().image(text, url, title)
+        self._fig_no += 1
+        fig_id = re.sub(r'[^\w]+', '-', f'fig-{text}')[:60].strip('-')
+        alt_attr = text.replace('"', '&quot;')
+        title_attr = f' title="{title}"' if title else ''
+        return (f'<figure id="fig-{self._fig_no}-{fig_id}" class="figure-block">'
+                f'<img src="{url}" alt="{alt_attr}"{title_attr}/>'
+                f'<figcaption>图 {self._fig_no}：{text}</figcaption></figure>')
+
     def heading(self, text, level, **attrs):
         # text 为内联渲染后的 HTML，先剥离标签再用纯文本生成锚点
         hid = attrs.get('id')
@@ -1362,7 +1384,7 @@ def absolutize_pdf_assets(html_text: str) -> str:
 def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
          title=None, author=None, language='zh-CN',
          make_pdf=True, make_epub=True, make_docx=True, formulas_enabled=True,
-         bookmark_depth=DEFAULT_BOOKMARK_DEPTH):
+         bookmark_depth=DEFAULT_BOOKMARK_DEPTH, make_pdf_ua=True):
     # 公式缓存目录通过环境变量传递给多进程 worker（不覆盖调用方的预先设置）
     os.environ.setdefault('MDCONV_FORMULA_CACHE', FORMULA_CACHE_DIR)
 
@@ -1480,19 +1502,34 @@ def main(docdir: str, build_dir: str = BUILD_DIR, max_workers=None,
         from weasyprint import HTML
         from weasyprint.text.fonts import FontConfiguration
 
-        print('Generating PDF (this may take a while)...')
         _patch_pdfa4_output()
         font_conf = FontConfiguration()
+        # PDF/A-4U（ISO 19005-4:2020，基于 PDF 2.0 / ISO 32000-2，U 级）；
+        # 变体本身会设 2.0，但显式传值优先于变体默认值，两者须保持一致
+        print('Generating PDF/A-4 (this may take a while)...')
         HTML(pdf_html).write_pdf(
             os.path.join(build_dir, FINAL_PDF),
             font_config=font_conf,
-            # PDF/A-4U（ISO 19005-4:2020，基于 PDF 2.0 / ISO 32000-2，U 级）；
-            # 变体本身会设 2.0，但显式传值优先于变体默认值，两者须保持一致
-            pdf_version="2.0",
-            pdf_variant="pdf/a-4u",
+            pdf_version='2.0',
+            pdf_variant='pdf/a-4u',
             metadata=True,
         )
         print(f'PDF generated: {os.path.join(build_dir, FINAL_PDF)}')
+
+        # 无障碍版本：tagged PDF/UA-1（ISO 14289-1:2014，基于 PDF 1.7），
+        # 带结构树供读屏器使用；HTML 的 lang 属性会成为文档 /Lang。
+        # A 变体不含 tag 结构；UA-1 按 1.x 文件头渲染，与 PDF/A-4（2.0）
+        # 分别生成，veraPDF 的 ua1 profile 也按 1.x 头校验
+        if make_pdf_ua:
+            print('Generating PDF/UA-1 (tagged, this may take a while)...')
+            HTML(pdf_html).write_pdf(
+                os.path.join(build_dir, FINAL_PDF_UA),
+                font_config=font_conf,
+                pdf_version='1.7',
+                pdf_variant='pdf/ua-1',
+                metadata=True,
+            )
+            print(f'PDF/UA generated: {os.path.join(build_dir, FINAL_PDF_UA)}')
     else:
         print('已跳过 PDF 生成 (--no-pdf)')
 
@@ -1541,9 +1578,12 @@ if __name__ == '__main__':
                         choices=range(1, 7), metavar='{1-6}',
                         help='PDF 书签与目录的标题深度，按 Markdown 标题级别计'
                              '（默认 2，即到二级标题 ##）')
+    parser.add_argument('--no-pdf-ua', action='store_true',
+                        help='跳过无障碍版 PDF（tagged PDF/UA-1）的生成')
     args = parser.parse_args()
     main(args.docdir, build_dir=args.output, max_workers=args.workers,
          title=args.title, author=args.author, language=args.language,
          make_pdf=not args.no_pdf, make_epub=not args.no_epub,
          make_docx=not args.no_docx, formulas_enabled=not args.no_formula,
-         bookmark_depth=args.bookmark_depth)
+         bookmark_depth=args.bookmark_depth,
+         make_pdf_ua=not args.no_pdf_ua)

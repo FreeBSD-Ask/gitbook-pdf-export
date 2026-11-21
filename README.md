@@ -2,7 +2,7 @@
 
 作者为：[safreya](https://github.com/safreya)
 
-GitBook 通用 PDF/EPUB/Word 导出工具。支持代码高亮、LaTeX 公式、PDF 书签与目录页。
+GitBook 通用 PDF/EPUB/Word 导出工具。支持代码高亮、LaTeX 公式、PDF 目录页与书签、自动图号、脚注，并额外产出无障碍（PDF/UA）版本。
 
 **本项目基于 Python 3、mistune、EbookLib 及 WeasyPrint。CSS 样式模仿 GitBook PDF，并按 FreeBSD 中文社区文档站的 VitePress 主题调整了配色。**
 
@@ -17,10 +17,18 @@ GitBook 通用 PDF/EPUB/Word 导出工具。支持代码高亮、LaTeX 公式、
 | `mdconv-windows-x64.exe` | Windows x64 |
 | `mdconv-windows-arm64.exe` | Windows arm64 |
 | `mdconv-freebsd.tar.gz` | FreeBSD amd64，在 15.1 的 ZFS 根分区镜像上构建 |
+| `SHA-256SUMS` | 上述文件的校验和，可离线核验 |
+| `BUILD-INFO.txt` | 构建来源：tag、commit、构建时间 |
 
 macOS 暂不在支持与发布矩阵内。
 
-二进制的发布门槛：每个平台都会在自己的 runner 上实际运行产物（`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`），**任一平台失败则整批不发布**。
+二进制的发布门槛：每个平台都会在自己的 runner 上实际运行产物（`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`，EPUB/DOCX 断言 zip 容器），**任一平台失败则整批不发布**。
+
+校验下载到的文件：
+
+```sh
+sha256sum -c SHA-256SUMS
+```
 
 使用要点：
 
@@ -36,8 +44,8 @@ macOS 暂不在支持与发布矩阵内。
 |`start.html`|主 CSS 配置与 HTML 模板，不可删除|
 |`highlight.css`|代码高亮配色（BSD 命令自定义高亮），不可删除|
 |`fonts/`|霞鹜文楷 GB 版屏幕阅读版与等宽屏幕版，不可删除|
-|`tests/`|回归测试、PDF/A 样本构建与 veraPDF 校验脚本|
-|`build/`|输出目录，默认不存在，会自动生成；其中的 `pdf.html` 是 PDF 排版专用 HTML|
+|`tests/`|回归测试、样本构建、veraPDF 与 EPUBCheck 校验脚本|
+|`build/`|输出目录，会自动生成：`final.pdf`、`final-ua.pdf`、`final.epub`、`final.docx`，以及 PDF 排版专用的 `pdf.html`|
 
 ## 从源码使用
 
@@ -104,7 +112,8 @@ C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 |:---|:---|
 |`docdir`|文档根目录（含 SUMMARY.md）|
 |`-o, --output`|输出目录，默认 `build`|
-|`--no-pdf`|跳过 PDF 生成|
+|`--no-pdf`|跳过 PDF 生成（同时跳过 PDF/UA 版本）|
+|`--no-pdf-ua`|跳过无障碍版 PDF（tagged PDF/UA-1）|
 |`--no-epub`|跳过 EPUB 生成|
 |`--no-docx`|跳过 Word 文档生成|
 |`--no-formula`|跳过 LaTeX 公式渲染|
@@ -120,20 +129,38 @@ C:\Users\ykla\Desktop\gitbook-pdf-export-main\
 - 封面与目录本身不计入页序：正文第一章固定是第 1 页，目录跨多少页都不影响
 - 源目录文件（`mu-lu.md`、`SUMMARY.md`）不再整篇排版成页，避免与生成的目录重复
 - PDF 侧边栏书签按 `--bookmark-depth` 生成（SUMMARY 的分组标题始终作为章级书签）
-- EPUB 由阅读器目录（`nav`）导航；Word 插入 TOC 域，打开文档后按 F9 更新
+- EPUB 由阅读器目录（`nav`）导航，nav 带 `epub:type="toc"` 与 `role="doc-toc"` landmark
+- Word 插入 TOC 域，打开文档后按 F9 更新
+
+## 图号、脚注与中文排版
+
+- 普通图片自动包成 `<figure>` 并按章编号，图注为 `图 N：alt 文本`（编号在每个源文件内从 1 重新开始）；EPUB/DOCX 同样保留图注
+- pandoc 风格脚注 `[^1]` 与定义 `[^1]: 说明` 在 PDF、EPUB、Word 中都会呈现
+- 正文启用中文排版规则（对照 W3C [clreq](https://www.w3.org/TR/clreq)）：`line-break: strict` 严格避头尾、`text-autospace` 中西文之间自动加间距（盘古之白）、`word-break: auto-phrase` 词组级断行（渐进增强，不支持的引擎忽略）
 
 ## PDF 标准与校验
 
-PDF 基于 **PDF 2.0（ISO 32000-2）** 输出，声明为 **PDF/A-4（ISO 19005-4:2020）** 基础级：XMP 含 `pdfaid:part="4"` 与 `pdfaid:rev="2020"`，基础级不带 `pdfaid:conformance`（该属性只属于 4e/4f）。WeasyPrint 70 与标准之间还有两处差异，mdconv 同样在渲染阶段补齐：部分 SVG（如 shields.io 徽章）会让上游写出 NaN 坐标，序列化为未定义操作符 `nan`（6.2.2 禁止），现折算为 0；位图的 `Interpolate` 上游默认写 true（6.2.7.1 要求 false），现统一关闭——该标志只影响阅读器缩放时的平滑方式，不改动图像像素数据。
+默认产出两份 PDF：
 
-CI 除单元测试外，还会构建最小样本并用 [veraPDF](https://verapdf.org) 实测校验（flavour 4）：
+| 产物 | 标准 | 用途 |
+|:---|:---|:---|
+| `final.pdf` | **PDF/A-4**（ISO 19005-4:2020，PDF 2.0） | 归档、长期保存 |
+| `final-ua.pdf` | **PDF/UA-1**（ISO 14289-1:2014，PDF 1.7 + 结构树） | 无障碍阅读（读屏器可按结构树朗读） |
+
+`final.pdf` 声明为 PDF/A-4 基础级：XMP 含 `pdfaid:part="4"` 与 `pdfaid:rev="2020"`，基础级不带 `pdfaid:conformance`（该属性只属于 4e/4f）。WeasyPrint 70 与标准之间还有两处差异，mdconv 在渲染阶段补齐：部分 SVG（如 shields.io 徽章）会让上游写出 NaN 坐标，序列化为未定义操作符 `nan`（6.2.2 禁止），现折算为 0；位图的 `Interpolate` 上游默认写 true（6.2.7.1 要求 false），现统一关闭——该标志只影响阅读器缩放时的平滑方式，不改动图像像素数据。
+
+`final-ua.pdf` 带完整结构树（`/StructTreeRoot`）与文档语言（`/Lang` 取自 HTML 的 `lang`）。PDF/UA-1 基于 PDF 1.7，与 PDF/A-4 的文件版本不同，因此分别渲染；PDF/UA-2（基于 PDF 2.0）要求的结构语义 WeasyPrint 尚未完全产出，暂不提供。
+
+CI 除单元测试外，会构建最小样本并对两份 PDF 与 EPUB 做官方校验：
 
 ```sh
 python tests/build_pdfa_sample.py pdfa-sample
-python tests/verapdf_cli.py pdfa-sample/final.pdf
+python tests/verapdf_cli.py pdfa-sample/final.pdf -f 4      # PDF/A-4
+python tests/verapdf_cli.py pdfa-sample/final-ua.pdf -f ua1 # PDF/UA-1
+python tests/epubcheck_cli.py pdfa-sample/final.epub        # EPUBCheck
 ```
 
-`tests/verapdf_cli.py` 首次运行会从 software.verapdf.org 下载固定版本（1.30.4）的安装包，提取 CLI 后缓存在 `VERAPDF_CLI_CACHE`（默认系统临时目录）中复用；校验不通过时以非零码退出。
+`tests/verapdf_cli.py` 首次运行会从 software.verapdf.org 下载固定版本（1.30.4）的安装包，提取 CLI 后缓存在 `VERAPDF_CLI_CACHE`（默认系统临时目录）中复用；`tests/epubcheck_cli.py` 从 GitHub Releases 下载 EPUBCheck 5.2.1 并缓存。任一校验不通过即以非零码退出。
 
 ## 字体说明
 
@@ -160,7 +187,7 @@ yay -S ttf-lxgw-wenkai-screen
 
 ## CI 与发布
 
-- `tests.yml`：21 项回归测试 + 构建最小样本并跑 veraPDF（PDF/A-4）
+- `tests.yml`：32 项回归测试（含跨格式内容完整性、图号、脚注、EPUB 无障碍断言）+ 构建样本后跑 veraPDF（PDF/A-4 与 PDF/UA-1）与 EPUBCheck
 - `build-binaries.yml`：Ubuntu x64/arm64 与 Windows x64/arm64 上用 PyInstaller 打包，FreeBSD 在 15.1 的 ZFS 镜像内构建；OpenBSD/NetBSD 做冒烟测试（缺预编译依赖时仅作参考，不阻塞发布）
-- 每个平台构建后都会在本机运行产物：`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`、EPUB/DOCX 断言 zip 容器；没有 GTK 的平台只验证 CLI 与 HTML
-- 推送 `[0-9]*` 形式的 tag 会触发构建并自动把产物发布到对应 Release；任一平台构建或冒烟失败则不发布
+- 每个平台构建后都会在本机运行产物：`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`、EPUB/DOCX 断言 zip 容器；没有 GTK 的平台只验证 CLI、HTML、EPUB 与 DOCX
+- 推送 `[0-9]*` 形式的 tag 会触发构建，全部平台通过后自动上传二进制、`SHA-256SUMS` 与 `BUILD-INFO.txt` 到对应 Release；任一平台构建或冒烟失败则不发布

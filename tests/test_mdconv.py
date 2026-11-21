@@ -167,6 +167,17 @@ class MdconvTest(unittest.TestCase):
         self.assertNotIn('pdfaid:conformance', xmp, '基础 PDF/A-4 不应带 conformance')
         self.assertIn('pdfaid:rev="2020"', xmp, 'PDF/A-4 缺少 pdfaid:rev="2020"')
 
+    @unittest.skipIf(not HAS_PYPDF, '未安装 pypdf，跳过 PDF 测试')
+    def test_pdf_ua_variant(self):
+        """应额外生成 tagged PDF/UA-1 无障碍版本（1.7 + 结构树）"""
+        reader = pypdf.PdfReader(os.path.join(self.build, 'final-ua.pdf'))
+        root = reader.trailer['/Root']
+        xmp = root['/Metadata'].get_data().decode('utf-8', 'ignore')
+        self.assertEqual(reader.pdf_header, '%PDF-1.7')
+        self.assertIn('/StructTreeRoot', root, '缺少结构树')
+        self.assertIn('pdfuaid', xmp, '缺少 PDF/UA 标识')
+        self.assertIsNotNone(root.get('/Lang'), '缺少文档语言 /Lang')
+
     def test_epub_metadata(self):
         """EPUB 元数据应来自调用参数而非占位符"""
         with zipfile.ZipFile(os.path.join(self.build, 'final.epub')) as z:
@@ -353,7 +364,8 @@ class ContentIntegrityTest(unittest.TestCase):
                     + f'## 第{num}节\n\n'
                     '```sh\necho hello\n```\n\n'
                     f'### 第{num}小节\n\n'
-                    '正文。\n')
+                    '正文。[^note]\n\n'
+                    f'[^note]: 第{num}章的脚注说明。\n')
             fname = 'c1.md' if sub == 'ch1' else 'c2.md'
             with open(os.path.join(cls.docdir, sub, fname), 'w', encoding='utf-8') as f:
                 f.write(body)
@@ -500,6 +512,57 @@ class ContentIntegrityTest(unittest.TestCase):
         with zipfile.ZipFile(self._docx) as z:
             body = z.read('word/document.xml').decode('utf-8', 'ignore')
         self.assertIn('TOC \\o', body, 'Word 缺少 TOC 域')
+
+    def test_footnotes_survive(self):
+        """pandoc 风格脚注 [^note] 必须进入三种介质"""
+        note = '脚注说明'
+        reader = pypdf.PdfReader(self._pdf)
+        text = ''.join((p.extract_text() or '') for p in reader.pages)
+        self.assertIn(note, text, 'PDF 丢失脚注内容')
+        with zipfile.ZipFile(self._epub) as z:
+            bodies = [re.sub(r'<[^>]+>', '', z.read(n).decode('utf-8'))
+                      for n in z.namelist() if n.endswith('.xhtml')]
+        self.assertTrue(any(note in b for b in bodies), 'EPUB 丢失脚注内容')
+        import docx
+        d = docx.Document(self._docx)
+        self.assertTrue(any(note in p.text for p in d.paragraphs),
+                        'Word 丢失脚注内容')
+
+    def test_figures_are_numbered(self):
+        """图片应自动包装 figure 并按章编号（图 N：alt）"""
+        with zipfile.ZipFile(self._epub) as z:
+            figs = 0
+            caps = []
+            for n in [x for x in z.namelist() if x.endswith('.xhtml')]:
+                html = z.read(n).decode('utf-8')
+                figs += html.count('<figure')
+                caps += re.findall(r'<figcaption>图 (\d+)：([^<]+)</figcaption>', html)
+        # ch1 一章一图，ch2 的编号在章内重新从 1 开始
+        self.assertEqual(sorted(int(n) for n, _ in caps), [1, 1, 2],
+                         f'图片编号错误: {caps}')
+        self.assertEqual(figs, 3, 'figure 数量与图片不一致')
+
+    def test_epub_accessibility(self):
+        """EPUB 无障碍：nav 带 landmark，所有 img 均有 alt"""
+        with zipfile.ZipFile(self._epub) as z:
+            nav = next(n for n in z.namelist() if n.endswith('nav.xhtml'))
+            nav_html = z.read(nav).decode('utf-8')
+            missing_alt = []
+            for n in [x for x in z.namelist() if x.endswith('.xhtml')]:
+                html = z.read(n).decode('utf-8')
+                for tag in re.findall(r'<img[^>]*>', html):
+                    if 'alt=' not in tag:
+                        missing_alt.append(f'{n}: {tag[:60]}')
+        self.assertIn('epub:type="toc"', nav_html, 'nav 缺少 epub:type landmark')
+        self.assertIn('role="doc-toc"', nav_html, 'nav 缺少 doc-toc role')
+        self.assertEqual(missing_alt, [], f'EPUB 存在无 alt 的图片: {missing_alt}')
+
+    def test_typography_css_in_epub(self):
+        """中文排版规则（避头尾、盘古之白）应进入 EPUB 样式表"""
+        with zipfile.ZipFile(self._epub) as z:
+            main_css = z.read('EPUB/css/main.css').decode('utf-8')
+        self.assertIn('line-break: strict', main_css, '缺少避头尾规则')
+        self.assertIn('text-autospace', main_css, '缺少中西文间距规则')
 
 
 class PaginationTest(unittest.TestCase):

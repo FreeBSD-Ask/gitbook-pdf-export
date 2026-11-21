@@ -57,6 +57,11 @@ jobs:
         run: |
           python tests/verapdf_cli.py pdfa-sample/final.pdf
 
+      # 无障碍版本（tagged PDF/UA-1）同样过 veraPDF：-f ua1 校验结构树与语言
+      - name: Validate PDF/UA-1 with veraPDF
+        run: |
+          python tests/verapdf_cli.py pdfa-sample/final-ua.pdf -f ua1
+
       # W3C 官方一致性检查器：EPUB 3 结构、媒体类型、链接与可访问性
       - name: Validate EPUB with EPUBCheck
         run: |
