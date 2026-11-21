@@ -87,6 +87,6 @@ Formula rendering is **gracefully degraded**: with no usable backend the formula
 ## CI/CD
 
 - `.github/workflows/build-binaries.yml` — builds PyInstaller binaries on Python 3.15 for Ubuntu, Windows (x64/arm64), and FreeBSD 15.1 (ZFS image, py312 packages); macOS is out of the support matrix. Every job runs the produced binary on its own platform (`-h` plus a real export, asserting `%PDF-2.0`); pushing a `[0-9]*` tag publishes the artifacts plus `SHA-256SUMS` and `BUILD-INFO.txt` to a GitHub Release, and a failing platform blocks the release
-- `.github/workflows/tests.yml` — runs the 52-test suite on Python 3.15 with Bun installed (`oven-sh/setup-bun` + `bun install --frozen-lockfile` in `tools/mathjax`), builds a sample (PDF + PDF/UA + EPUB) and validates it with veraPDF (PDF/A-4 `-f 4`, PDF/UA-1 `-f ua1`) and EPUBCheck
+- `.github/workflows/tests.yml` — runs the 53-test suite on Python 3.15 with Bun installed (`oven-sh/setup-bun` + `bun install --frozen-lockfile` in `tools/mathjax`), builds a sample (PDF + PDF/UA + EPUB) and validates it with veraPDF (PDF/A-4 `-f 4`, PDF/UA-1 `-f ua1`) and EPUBCheck
 - `.github/dependabot.yml` — daily dependency updates for GitHub Actions and pip
 - WeasyPrint is imported lazily in `main()` (it dlopens pango at import time), so CLI/HTML/EPUB/DOCX work on platforms without GTK

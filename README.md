@@ -210,7 +210,7 @@ yay -S ttf-lxgw-wenkai-screen
 
 ## CI 与发布
 
-- `tests.yml`：52 项回归测试（含跨格式内容完整性、图号、脚注、EPUB 无障碍与内容模型断言、MathJax 后端）+ 构建样本后跑 veraPDF（PDF/A-4 与 PDF/UA-1）与 EPUBCheck；CI 会用 `oven-sh/setup-bun` 装上 Bun 并执行 `bun install`，让 MathJax 测试真正运行
+- `tests.yml`：53 项回归测试（含跨格式内容完整性、图号、脚注、EPUB 无障碍与内容模型断言、MathJax 后端）+ 构建样本后跑 veraPDF（PDF/A-4 与 PDF/UA-1）与 EPUBCheck；CI 会用 `oven-sh/setup-bun` 装上 Bun 并执行 `bun install`，让 MathJax 测试真正运行
 - `build-binaries.yml`：Ubuntu x64/arm64 与 Windows x64/arm64 上用 PyInstaller 打包，FreeBSD 在 15.1 的 ZFS 镜像内构建；OpenBSD/NetBSD 做冒烟测试（缺预编译依赖时仅作参考，不阻塞发布）
 - 每个平台构建后都会在本机运行产物：`-h` 加一次真实导出，PDF 断言 `%PDF-2.0`、EPUB/DOCX 断言 zip 容器；没有 GTK 的平台只验证 CLI、HTML、EPUB 与 DOCX
 - 推送 `[0-9]*` 形式的 tag 会触发构建，全部平台通过后自动上传二进制、`SHA-256SUMS` 与 `BUILD-INFO.txt` 到对应 Release；任一平台构建或冒烟失败则不发布
